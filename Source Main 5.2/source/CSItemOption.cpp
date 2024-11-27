@@ -16,7 +16,7 @@
 #include "NewUISystem.h"
 #include "SkillManager.h"
 
-extern	wchar_t TextList[50][100] = {};
+extern	wchar_t TextList[50][100];
 extern	int  TextListColor[50];
 extern	int  TextBold[50];
 
