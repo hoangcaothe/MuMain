@@ -137,7 +137,7 @@ bool CSQuest::OpenQuestScript(wchar_t* filename)
     FILE* fp = _wfopen(filename, L"rb");
     if (fp == NULL)
     {
-        wchar_t Text[256];
+        wchar_t Text[256]{ 0 };
         swprintf(Text, L"%s - File not exist.", filename);
         return  FALSE;
     }
@@ -469,7 +469,7 @@ void CSQuest::ShowDialogText(int iDialogIndex)
 {
     g_iCurrentDialogScript = iDialogIndex;
 
-    wchar_t Text[300];
+    wchar_t Text[300]{ 0 };
     CMultiLanguage::ConvertFromUtf8(Text, g_DialogScript[g_iCurrentDialogScript].m_lpszText);
 
     g_iNumLineMessageBoxCustom = SeparateTextIntoLines(Text, g_lpszMessageBoxCustom[0], NUM_LINE_CMB, MAX_LENGTH_CMB);
@@ -661,7 +661,7 @@ void CSQuest::RenderDevilSquare(void)
 
 void CSQuest::RenderBloodCastle(void)
 {
-    wchar_t Text[100];
+    wchar_t Text[100]{ 0 };
     g_pRenderText->SetFont(g_hFontBold);
     g_pRenderText->SetTextColor(230, 230, 230, 255);
     g_pRenderText->SetBgColor(20, 20, 20, 255);

@@ -38,7 +38,7 @@ struct ITEM_SET_TYPE
 
 struct ITEM_SET_OPTION
 {
-    wchar_t strSetName[MAX_ITEM_SET_NAME];
+    wchar_t strSetName[MAX_ITEM_SET_NAME]{ 0 };
     BYTE bySetItemCount; // The number of items in the set
     BYTE byOptionCount; // The total number of options in the set
 
@@ -75,7 +75,7 @@ struct SET_SEARCH_RESULT
     BYTE CompleteSetItemCount;
     BYTE ItemCount;
     BYTE SetTypeIndex;
-    wchar_t SetName[MAX_ITEM_SET_NAME];
+    wchar_t SetName[MAX_ITEM_SET_NAME]{ 0 };
 };
 
 struct SET_SEARCH_RESULT_OPT

@@ -319,7 +319,7 @@ void CCreditWin::LoadText()
     FILE* fp = ::_wfopen(CRW_DATA_FILE, L"rb");
     if (fp == NULL)
     {
-        wchar_t szMessage[256];
+        wchar_t szMessage[256] { 0 };
         swprintf(szMessage, L"%s file not found.\r\n", CRW_DATA_FILE);
         g_ErrorReport.Write(szMessage);
         ::MessageBox(g_hWnd, szMessage, NULL, MB_OK);

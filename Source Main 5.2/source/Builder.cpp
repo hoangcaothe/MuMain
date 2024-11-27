@@ -148,7 +148,7 @@ BoostSmart_Ptr(InfoFile) Builder::MakeInfo(InfoTextType type)
 {
     BoostSmart_Ptr(InfoFile) info;
 
-    wchar_t TextFileName[512];
+    wchar_t TextFileName[512] { 0 };
 
     swprintf(TextFileName, L"%s%s%s%s%s", //경로, 파일명, 테스트, 나라별, 확장명
         TEXTFILEPOSITION,

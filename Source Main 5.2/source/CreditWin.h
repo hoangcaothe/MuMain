@@ -39,7 +39,7 @@ class CCreditWin : public CWin
     struct SCreditItem
     {
         BYTE	byClass;
-        wchar_t	szName[CRW_NAME_MAX];
+        wchar_t	szName[CRW_NAME_MAX] { 0 };
     };
 
 protected:

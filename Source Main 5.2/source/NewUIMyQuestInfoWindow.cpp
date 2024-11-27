@@ -486,7 +486,7 @@ void CNewUIMyQuestInfoWindow::SetSelQuestSummary()
         g_hFontBold, 0xff0ab9ff, RT3_SORT_CENTER, g_QuestMng.GetSubject(dwSelQuestIndex));
 
     g_pRenderText->SetFont(g_hFont);
-    wchar_t aszSummary[8][64];
+    wchar_t aszSummary[8][64] = {};
     int nLine = ::DivideStringByPixel(
         &aszSummary[0][0], 8, 64, g_QuestMng.GetSummary(dwSelQuestIndex), 150);
     int i;

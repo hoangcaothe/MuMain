@@ -76,7 +76,7 @@ void CSMServer::ConnectChangeMapServer(MServerInfo sInfo)
 
         ::Sleep(20);
 
-        wchar_t ip[16];
+        wchar_t ip[16]{ 0 };
         CMultiLanguage::ConvertFromUtf8(ip, m_vServerInfo.m_szMapSvrIpAddress);
 
         if (CreateSocket(ip, m_vServerInfo.m_wMapSvrPort))

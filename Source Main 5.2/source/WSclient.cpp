@@ -10227,7 +10227,7 @@ void ReceiveQuestQSSelSentence(const BYTE* ReceiveBuffer)
 
 void ReceiveQuestQSRequestReward(const BYTE* ReceiveBuffer)
 {
-    auto pData = (LPPMSG_NPC_QUESTEXP_INFO)ReceiveBuffer;
+    auto pData = (LPPMSG_NPC_QUESTREWARD_INFO)ReceiveBuffer;
     g_QuestMng.SetQuestRequestReward(ReceiveBuffer);
     g_QuestMng.SetCurQuestProgress(pData->m_dwQuestIndex);
     g_QuestMng.SetEPRequestRewardState(pData->m_dwQuestIndex, true);
@@ -10285,7 +10285,8 @@ void ReceiveProgressQuestList(const BYTE* ReceiveBuffer)
 
 void ReceiveProgressQuestRequestReward(const BYTE* ReceiveBuffer)
 {
-    auto pData = (LPPMSG_NPC_QUESTEXP_INFO)ReceiveBuffer;
+    //auto pData = (LPPMSG_NPC_QUESTEXP_INFO)ReceiveBuffer;
+    auto pData = (LPPMSG_NPC_QUESTREWARD_INFO)ReceiveBuffer;
     g_QuestMng.SetQuestRequestReward(ReceiveBuffer);
     g_pMyQuestInfoWindow->SetSelQuestRequestReward();
 }
@@ -13727,8 +13728,20 @@ static void HandleIncomingPacket(int32_t Handle, const BYTE* ReceiveBuffer, int3
         break;
     case 0xF6:
     {
-        auto Data = (LPPHEADER_DEFAULT_SUBCODE)ReceiveBuffer;
-        switch (Data->SubCode)
+        BYTE bySubcode;
+
+        if (bIsC1C3)
+        {
+            auto Data = (LPPHEADER_DEFAULT_SUBCODE)ReceiveBuffer;
+            bySubcode = Data->SubCode;
+        }
+        else
+        {
+            auto Data = (LPPHEADER_DEFAULT_SUBCODE_WORD)ReceiveBuffer;
+            bySubcode = Data->SubCode;
+        }
+
+        switch (bySubcode)
         {
 #ifdef ASG_ADD_TIME_LIMIT_QUEST
         case 0x00:

@@ -43,7 +43,7 @@ namespace leaf {
             return true;
         }
         bool ReadString(const std::wstring& name, std::wstring& value) {
-            wchar_t	szTempKey[256];
+            wchar_t	szTempKey[256]{ 0 };
             HKEY	hKey = NULL;
             DWORD	dwDisp;
             DWORD	dwType = REG_EXPAND_SZ;

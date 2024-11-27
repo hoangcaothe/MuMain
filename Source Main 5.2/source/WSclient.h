@@ -1244,13 +1244,23 @@ typedef struct
 
 typedef struct
 {
+    PBMSG_HEADER	Header;
+    BYTE			SubCode;
+    DWORD			m_dwQuestIndex;
+    BYTE			m_byRequestCount;
+    BYTE			m_byRewardCount;
+    BYTE			m_byRandRewardCount;
+} PMSG_NPC_QUESTEXP_INFO, * LPPMSG_NPC_QUESTEXP_INFO;
+
+typedef struct
+{
     PWMSG_HEADER	Header;
     BYTE			SubCode;
     BYTE			m_byRequestCount;
     BYTE			m_byRewardCount;
     BYTE			m_byRandRewardCount;
     DWORD			m_dwQuestIndex;
-} PMSG_NPC_QUESTEXP_INFO, * LPPMSG_NPC_QUESTEXP_INFO;
+} PMSG_NPC_QUESTREWARD_INFO, * LPPMSG_NPC_QUESTREWARD_INFO;
 
 
 enum QUEST_REQUEST_TYPE : BYTE

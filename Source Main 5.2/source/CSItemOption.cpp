@@ -16,7 +16,7 @@
 #include "NewUISystem.h"
 #include "SkillManager.h"
 
-extern	wchar_t TextList[50][100];
+extern	wchar_t TextList[50][100] = {};
 extern	int  TextListColor[50];
 extern	int  TextBold[50];
 
@@ -73,7 +73,7 @@ bool CSItemOption::OpenItemSetType(const wchar_t* filename)
 
         if (dwCheckSum != GenerateCheckSum2(Buffer, Size * MAX_ITEM, 0xE5F1))
         {
-            wchar_t Text[256];
+            wchar_t Text[256] { 0 };
             swprintf(Text, L"%s - File corrupted.", filename);
             g_ErrorReport.Write(Text);
             MessageBox(g_hWnd, Text, nullptr, MB_OK);
@@ -94,7 +94,7 @@ bool CSItemOption::OpenItemSetType(const wchar_t* filename)
     }
     else
     {
-        wchar_t Text[256];
+        wchar_t Text[256] { 0 };
         swprintf(Text, L"%s - File not exist.", filename);
         g_ErrorReport.Write(Text);
         MessageBox(g_hWnd, Text, nullptr, MB_OK);
@@ -119,7 +119,7 @@ bool CSItemOption::OpenItemSetOption(const wchar_t* filename)
 
         if (dwCheckSum != GenerateCheckSum2(Buffer, Size * MAX_SET_OPTION, 0xA2F1))
         {
-            wchar_t Text[256];
+            wchar_t Text[256] { 0 };
             swprintf(Text, L"%s - File corrupted.", filename);
             g_ErrorReport.Write(Text);
             MessageBox(g_hWnd, Text, nullptr, MB_OK);
@@ -185,7 +185,7 @@ bool CSItemOption::OpenItemSetOption(const wchar_t* filename)
     }
     else
     {
-        wchar_t Text[256];
+        wchar_t Text[256]{ 0 };
         swprintf(Text, L"%s - File does not exist.", filename);
         g_ErrorReport.Write(Text);
         MessageBox(g_hWnd, Text, nullptr, MB_OK);
@@ -1038,7 +1038,7 @@ void CSItemOption::RenderSetOptionList(const int StartX, const int StartY)
 
 void CSItemOption::CheckRenderOptionHelper(const wchar_t* FilterName)
 {
-    wchar_t Name[256];
+    wchar_t Name[256]{ 0 };
 
     if (FilterName[0] != '/') return;
 

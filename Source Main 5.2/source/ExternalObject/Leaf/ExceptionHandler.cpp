@@ -199,7 +199,7 @@ void CExceptionHandler::SetProcessInfoHeader(DMPPROCESSINFOHEADER* pProcessInfoH
                     if (ProcessEntry.th32ProcessID == GetCurrentProcessId()) {
                         pProcessInfoHeader->ProcessId = ProcessEntry.th32ProcessID;
 
-                        wchar_t szModuleFileName[256];
+                        wchar_t szModuleFileName[256]{ 0 };
                         GetModuleFileName(NULL, szModuleFileName, 256);
                         lstrcpyn(pProcessInfoHeader->szImageName, szModuleFileName, 256);
 
@@ -220,7 +220,7 @@ void CExceptionHandler::SetProcessInfoHeader(DMPPROCESSINFOHEADER* pProcessInfoH
         {
             pProcessInfoHeader->ProcessId = GetCurrentProcessId();
 
-            wchar_t szModuleFileName[256];
+            wchar_t szModuleFileName[256]{ 0 };
             GetModuleFileName(NULL, szModuleFileName, 256);
             lstrcpyn(pProcessInfoHeader->szImageName, szModuleFileName, 256);
 
@@ -285,13 +285,13 @@ void CExceptionHandler::GetExceptionCodeString(IN PEXCEPTION_RECORD pExceptionRe
         strType = L"Access violation";
         if (pExceptionRecord->ExceptionInformation[0] == 0)
         {
-            wchar_t szExceptionInfo[64];
+            wchar_t szExceptionInfo[64]{ 0 };
             swprintf(szExceptionInfo, L" : reading inaccessible 0x%08X", pExceptionRecord->ExceptionInformation[1]);
             strType += szExceptionInfo;
         }
         else
         {
-            wchar_t szExceptionInfo[64];
+            wchar_t szExceptionInfo[64]{ 0 };
             swprintf(szExceptionInfo, L" : writing inaccessible 0x%08X", pExceptionRecord->ExceptionInformation[1]);
             strType += szExceptionInfo;
         }
