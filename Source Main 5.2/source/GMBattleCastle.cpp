@@ -340,25 +340,42 @@ namespace battleCastle
 
         vec3_t Angle, Position;
         Vector(0.f, 0.f, 0.f, Angle);
-        Vector(0.f, 0.f, 270.f, Position);
+        Vector(0.f, 0.f, 0.f, Position);
 
         SocketClient->ToGameServer()->SendGuildLogoOfCastleOwnerRequest();
 
         OpenMonsterModel(MONSTER_MODEL_BATTLE_GUARD2);
 
-        Position[0] = 65 * TERRAIN_SCALE; Position[1] = 113 * TERRAIN_SCALE;
+        constexpr float zOffset = 80.f;
+
+        Position[0] = 65 * TERRAIN_SCALE;
+        Position[1] = 113 * TERRAIN_SCALE;
+        Position[2] = RequestTerrainHeight(Position[0], Position[1]) + zOffset;
         CreateObject(MODEL_BATTLE_GUARD2, Position, Angle);
 
-        Position[0] = 71 * TERRAIN_SCALE; Position[1] = 113 * TERRAIN_SCALE;
+        Position[0] = 71 * TERRAIN_SCALE;
+        Position[1] = 113 * TERRAIN_SCALE;
+        Position[2] = RequestTerrainHeight(Position[0], Position[1]) + zOffset;
         CreateObject(MODEL_BATTLE_GUARD2, Position, Angle);
 
-        Position[0] = 91 * TERRAIN_SCALE; Position[1] = 113 * TERRAIN_SCALE;
+        Position[0] = 91 * TERRAIN_SCALE;
+        Position[1] = 113 * TERRAIN_SCALE;
+        Position[2] = RequestTerrainHeight(Position[0], Position[1]) + zOffset;
         CreateObject(MODEL_BATTLE_GUARD2, Position, Angle);
 
-        Position[0] = 118 * TERRAIN_SCALE; Position[1] = 113 * TERRAIN_SCALE;
+        Position[0] = 97 * TERRAIN_SCALE;
+        Position[1] = 113 * TERRAIN_SCALE;
+        Position[2] = RequestTerrainHeight(Position[0], Position[1]) + zOffset;
         CreateObject(MODEL_BATTLE_GUARD2, Position, Angle);
 
-        Position[0] = 123 * TERRAIN_SCALE; Position[1] = 113 * TERRAIN_SCALE;
+        Position[0] = 117 * TERRAIN_SCALE;
+        Position[1] = 113 * TERRAIN_SCALE;
+        Position[2] = RequestTerrainHeight(Position[0], Position[1]) + zOffset;
+        CreateObject(MODEL_BATTLE_GUARD2, Position, Angle);
+
+        Position[0] = 123 * TERRAIN_SCALE;
+        Position[1] = 113 * TERRAIN_SCALE;
+        Position[2] = RequestTerrainHeight(Position[0], Position[1]) + zOffset;
         CreateObject(MODEL_BATTLE_GUARD2, Position, Angle);
     }
 
@@ -1139,7 +1156,7 @@ namespace battleCastle
             if (IsBattleCastleStart() == false)
             {
                 Vector(1.f, 1.f, 1.f, Light);
-                CreateParticle(BITMAP_WATERFALL_5, o->Position, o->Angle, Light, 6, o->Scale);
+                CreateParticleFpsChecked(BITMAP_WATERFALL_5, o->Position, o->Angle, Light, 6, o->Scale);
             }
             break;
         case 53:
@@ -1153,7 +1170,7 @@ namespace battleCastle
             if (IsBattleCastleStart() == false)
             {
                 Vector(1.f, 1.f, 1.f, Light);
-                CreateParticle(BITMAP_WATERFALL_3 + (rand() % 2), o->Position, o->Angle, Light, 0);
+                CreateParticleFpsChecked(BITMAP_WATERFALL_3 + (rand() % 2), o->Position, o->Angle, Light, 0);
             }
             break;
         }
@@ -1704,16 +1721,20 @@ namespace battleCastle
         switch (c->MonsterIndex)
         {
         case MONSTER_TRAP:
-            if ((int)c->AttackTime == 5)
+            if (c->CheckAttackTime(5))
             {
                 VectorCopy(o->Position, Position);
                 Position[2] += 500.f;
                 CreateEffect(MODEL_BATTLE_GUARD2, Position, o->Angle, o->Light, 0);
+                c->SetLastAttackEffectTime();
             }
             return true;
 
         case MONSTER_CANON_TOWER:
-            CreateEffect(BITMAP_JOINT_FORCE, o->Position, o->Angle, o->Light);
+            if (rand_fps_check(1))
+            {
+                CreateEffect(BITMAP_JOINT_FORCE, o->Position, o->Angle, o->Light);
+            }
             return true;
         }
         return false;
