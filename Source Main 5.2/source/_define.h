@@ -308,6 +308,9 @@ enum struct STORAGE_TYPE
 #define MAX_NAMEFILTERS 500
 
 #define MAX_LETTER_TITLE_LENGTH		60
+#define MAX_LETTER_DATE_LENGTH		10
+#define MAX_LETTER_TIME_LENGTH		8
+
 #define MAX_LETTERTEXT_LENGTH		1000
 #define MAX_CHATROOM_TEXT_LENGTH	150
 #define MAX_LANGUAGE_NAME_LENGTH	4
@@ -348,7 +351,7 @@ constexpr int MAX_ITEM = MAX_ITEM_TYPE * MAX_ITEM_INDEX;
 #define MAX_EVENT_ITEM     35
 
 #define MAX_SOCKETS			5
-#define SOCKET_EMPTY		0xFF
+#define SOCKET_EMPTY		0xFE
 
 constexpr int ITEM_GROUP_SWORD = 0;
 constexpr int ITEM_GROUP_AXE = 1;
@@ -393,6 +396,7 @@ constexpr int ITEM_GROUP_ETC = 15;
 #define MAX_RESISTANCE		7
 
 #define MAX_CLASS			7
+#define MAX_CLASS_STAGES	3
 
 #define MAX_MONSTER			1024
 

@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include <memory>
 #include "UIManager.h"
 #include "GuildCache.h"
 #include "ZzzBMD.h"
@@ -119,6 +120,7 @@ BYTE Version[SIZE_PROTOCOLVERSION] = { '2', '0', '4', '0', '4' };
 
 BYTE Serial[SIZE_PROTOCOLSERIAL + 1] = { "k1Pk2jcET48mxL3b" };
 Connection* SocketClient = nullptr;
+bool EnableSocket = false;
 
 BYTE    g_byPacketSerialSend = 0;
 BYTE    g_byPacketSerialRecv = 0;
@@ -162,7 +164,7 @@ void AddDebugText(const unsigned char* Buffer, int Size)
 }
 
 // Forward declaration
-static void HandleIncomingPacketLocked(int32_t Handle, const BYTE* ReceiveBuffer, int32_t Size);
+static void HandleIncomingPacket(int32_t Handle, const BYTE* ReceiveBuffer, int32_t Size);
 
 BOOL CreateSocket(wchar_t* IpAddr, unsigned short Port)
 {
@@ -173,7 +175,7 @@ BOOL CreateSocket(wchar_t* IpAddr, unsigned short Port)
 
     // todo: generally, it's a bad idea to assume a specific port number (range).
     const bool isEncrypted = Port > 0xADFF || Port < 0xAD00;
-    SocketClient = new Connection(IpAddr, Port, isEncrypted, &HandleIncomingPacketLocked);
+    SocketClient = new Connection(IpAddr, Port, isEncrypted, &HandleIncomingPacket);
     if (!SocketClient->IsConnected())
     {
         bResult = FALSE;
@@ -274,7 +276,7 @@ void InitGuildWar()
     }
 }
 
-BOOL Util_CheckOption(wchar_t* lpszCommandLine, wchar_t cOption, wchar_t* lpszString);
+BOOL Util_CheckOption(std::wstring lpszCommandLine, wchar_t cOption, std::wstring &lpszString);
 
 void ReceiveServerList(const BYTE* ReceiveBuffer)
 {
@@ -461,72 +463,6 @@ void ReceiveChangePassword(const BYTE* ReceiveBuffer)
         CurrentProtocolState = RECEIVE_CHANGE_PASSWORD_FAIL_PASSWORD;
         break;
     }
-}
-
-void ReceiveCharacterList(std::span<const BYTE> ReceiveBuffer)
-{
-    InitGuildWar();
-
-    auto Data = safe_cast<PHEADER_DEFAULT_CHARACTER_LIST>(ReceiveBuffer);
-    if (Data == nullptr)
-    {
-        assert(false);
-        return;
-    }
-
-    int Offset = sizeof(PHEADER_DEFAULT_CHARACTER_LIST);
-
-#ifdef _DEBUG
-    g_ConsoleDebug->Write(MCD_RECEIVE, L"[ReceiveList Count %d Max class %d]", Data->CharacterCount, Data->MaxClass);
-#else
-    g_ErrorReport.Write(L"[ReceiveList Count %d Max class %d]", Data->CharacterCount, Data->MaxClass);
-#endif
-
-    CharacterAttribute->IsVaultExtended = Data->IsVaultExtended;
-    for (int i = 0; i < Data->CharacterCount; i++)
-    {
-        auto Data2 = safe_cast<PRECEIVE_CHARACTER_LIST_EXTENDED>(ReceiveBuffer.subspan(Offset));
-        if (Data2 == nullptr)
-        {
-            assert(false);
-            return;
-        }
-
-        auto iClass = gCharacterManager.ChangeServerClassTypeToClientClassType(Data2->Class);
-
-        float fPos[2], fAngle = 0.0f;
-
-        switch (Data2->Index)
-        {
-#ifdef PJH_NEW_SERVER_SELECT_MAP
-        case 0:	fPos[0] = 8008.0f;	fPos[1] = 18885.0f;	fAngle = 115.0f; break;
-        case 1:	fPos[0] = 7986.0f;	fPos[1] = 19145.0f;	fAngle = 90.0f; break;
-        case 2:	fPos[0] = 8046.0f;	fPos[1] = 19400.0f;	fAngle = 75.0f; break;
-        case 3:	fPos[0] = 8133.0f;	fPos[1] = 19645.0f;	fAngle = 60.0f; break;
-        case 4:	fPos[0] = 8282.0f;	fPos[1] = 19845.0f;	fAngle = 35.0f; break;
-#else //PJH_NEW_SERVER_SELECT_MAP
-        case 0:	fPos[0] = 22628.0f;	fPos[1] = 15012.0f;	fAngle = 100.0f; break;
-        case 1:	fPos[0] = 22700.0f;	fPos[1] = 15201.0f;	fAngle = 75.0f; break;
-        case 2:	fPos[0] = 22840.0f;	fPos[1] = 15355.0f;	fAngle = 50.0f; break;
-        case 3:	fPos[0] = 23019.0f;	fPos[1] = 15443.0f;	fAngle = 25.0f; break;
-        case 4:	fPos[0] = 23211.6f;	fPos[1] = 15467.0f;	fAngle = 0.0f; break;
-#endif //PJH_NEW_SERVER_SELECT_MAP
-        default: return;
-        }
-
-        CHARACTER* c = CreateHero(Data2->Index, iClass, 0, fPos[0], fPos[1], fAngle);
-
-        c->Level = Data2->Level;
-        c->CtlCode = Data2->CtlCode;
-
-        CMultiLanguage::ConvertFromUtf8(c->ID, Data2->ID, MAX_ID_SIZE);
-
-        ChangeCharacterExt(Data2->Index, Data2->Equipment);
-
-        c->GuildStatus = Data2->byGuildStatus;
-        Offset += sizeof(PRECEIVE_CHARACTER_LIST_EXTENDED);
-    }
-    CurrentProtocolState = RECEIVE_CHARACTERS_LIST;
 }
 
 void ReceiveCharacterListExtended(const BYTE* ReceiveBuffer)
@@ -1408,8 +1344,9 @@ BOOL ReceiveInventoryExtended(std::span<const BYTE> ReceiveBuffer)
         int itemindex = itemStartData->Index;
         Offset++;
 
-        int length = CalcItemLength(itemStartData->Item);
-        auto itemData = ReceiveBuffer.subspan(Offset, length);
+        auto itemData = ReceiveBuffer.subspan(Offset);
+        int length = CalcItemLength(itemData);
+        itemData = itemData.subspan(0, length);
 
         if (itemindex >= 0 && itemindex < MAX_EQUIPMENT_INDEX)
         {
@@ -1419,7 +1356,7 @@ BOOL ReceiveInventoryExtended(std::span<const BYTE> ReceiveBuffer)
         {
             g_pMyInventory->InsertItem(itemindex, itemData);
         }
-        else if (itemindex > MAX_MY_INVENTORY_INDEX && itemindex < MAX_MY_INVENTORY_EX_INDEX)
+        else if (itemindex >= MAX_MY_INVENTORY_INDEX && itemindex < MAX_MY_INVENTORY_EX_INDEX)
         {
             g_pMyInventoryExt->InsertItem(itemindex, itemData);
         }
@@ -1488,11 +1425,11 @@ void ReceiveTradeInventoryExtended(std::span<const BYTE> ReceiveBuffer)
         }
 
         int itemindex = itemStartData->Index;
-
-        int length = CalcItemLength(itemStartData->Item);
-
         Offset++;
-        auto itemData = ReceiveBuffer.subspan(Offset, length);
+
+        auto itemData = ReceiveBuffer.subspan(Offset);
+        int length = CalcItemLength(itemData);
+        itemData = itemData.subspan(0, length);
 
         if (Data->SubCode == 3 || Data->SubCode == 5)
         {
@@ -1761,7 +1698,7 @@ void ReceiveMoveCharacter(std::span<const BYTE> ReceiveBuffer)
     CHARACTER* c = &CharactersClient[FindCharacterIndex(Key)];
     OBJECT* o = &c->Object;
 
-    if (c->Dead || !o->Live)
+    if (c->Dead > 0 || !o->Live)
     {
         return;
     }
@@ -5465,7 +5402,7 @@ BOOL ReceiveDieExp(const BYTE* ReceiveBuffer, BOOL bEncrypted)
         Hero->TargetCharacter = Index;
         CreatePoint(o->Position, Damage, Light);
     }
-    c->Dead = true;
+    c->Dead = 1;
     c->Movement = false;
 
     if (gCharacterManager.IsMasterLevel(Hero->Class) == true)
@@ -5532,7 +5469,7 @@ BOOL ReceiveDieExpLarge(const BYTE* ReceiveBuffer, BOOL bEncrypted)
         CreatePoint(o->Position, damageOfLastHit, Light);
     }
 
-    killedObject->Dead = true;
+    killedObject->Dead = 1;
     killedObject->Movement = false;
 
     switch(experienceType)
@@ -5647,7 +5584,7 @@ void ReceiveDie(const BYTE* ReceiveBuffer, int Size)
 
     CHARACTER* c = &CharactersClient[Index];
     OBJECT* o = &c->Object;
-    c->Dead = true;
+    c->Dead = 1;
     c->Movement = false;
 
     WORD SkillType = ((int)(Data->MagicH) << 8) + Data->MagicL;
@@ -5758,9 +5695,11 @@ void ReceiveCreateItemViewportExtended(std::span<const BYTE> ReceiveBuffer)
             continue;
         }
 
-        int length = CalcItemLength(itemStartData->Item);
         Offset += 4;
-        auto itemData = ReceiveBuffer.subspan(Offset, length);
+        auto itemData = ReceiveBuffer.subspan(Offset);
+        int length = CalcItemLength(itemData);
+        itemData = itemData.subspan(0, length);
+
         auto params = ParseItemData(itemData);
         vec3_t Position;
         Position[0] = (float)(itemStartData->PositionX + 0.5f) * TERRAIN_SCALE;
@@ -5845,8 +5784,9 @@ void ReceiveGetItem(std::span<const BYTE> ReceiveBuffer)
                 }
 
                 auto offset = sizeof(PBMSG_HEADER) + 1;
-                int length = CalcItemLength(Data2->Item);
-                auto itemData = ReceiveBuffer.subspan(offset, length);
+                auto itemData = ReceiveBuffer.subspan(offset);
+                int length = CalcItemLength(itemData);
+                itemData = itemData.subspan(0, length);
 
                 if (itemIndex >= MAX_EQUIPMENT_INDEX && itemIndex < MAX_MY_INVENTORY_INDEX)
                 {
@@ -5930,8 +5870,9 @@ BOOL ReceiveEquipmentItemExtended(std::span<const BYTE> ReceiveBuffer)
     }
 
     auto Offset = sizeof(PBMSG_HEADER) + 2;
-    int length = CalcItemLength(Data->Item);
-    auto itemData = ReceiveBuffer.subspan(Offset, length);
+    auto itemData = ReceiveBuffer.subspan(Offset);
+    int length = CalcItemLength(itemData);
+    itemData = itemData.subspan(0, length);
 
     if (Data->SubCode != 255)
     {
@@ -5972,7 +5913,7 @@ BOOL ReceiveEquipmentItemExtended(std::span<const BYTE> ReceiveBuffer)
                 g_pStorageInventoryExt->ProcessStorageItemAutoMoveSuccess();
                 g_pMyInventory->InsertItem(itemindex, itemData);
             }
-            else if (itemindex > MAX_MY_INVENTORY_INDEX && itemindex < MAX_MY_INVENTORY_EX_INDEX)
+            else if (itemindex >= MAX_MY_INVENTORY_INDEX && itemindex < MAX_MY_INVENTORY_EX_INDEX)
             {
                 g_pStorageInventory->ProcessStorageItemAutoMoveSuccess();
                 g_pStorageInventoryExt->ProcessStorageItemAutoMoveSuccess();
@@ -6048,8 +5989,9 @@ void ReceiveModifyItemExtended(std::span<const BYTE> ReceiveBuffer)
     }
 
     auto Offset = sizeof(PBMSG_HEADER) + 2;
-    int length = CalcItemLength(Data->Item);
-    auto itemData = ReceiveBuffer.subspan(Offset, length);
+    auto itemData = ReceiveBuffer.subspan(Offset);
+    int length = CalcItemLength(itemData);
+    itemData = itemData.subspan(0, length);
 
     if (SEASON3B::CNewUIInventoryCtrl::GetPickedItem())
     {
@@ -6291,17 +6233,34 @@ void ReceiveBuy(const BYTE* ReceiveBuffer)
 
 void ReceiveBuyExtended(const std::span<const BYTE> ReceiveBuffer)
 {
-    auto Data = safe_cast<PHEADER_DEFAULT_ITEM_EXTENDED>(ReceiveBuffer);
+    auto Data = safe_cast<PHEADER_DEFAULT_ITEM_EXTENDED_HEAD>(ReceiveBuffer);
     if (Data == nullptr)
     {
         assert(false);
         return;
     }
 
-    auto Offset = sizeof(PBMSG_HEADER) + 1;
-    int length = CalcItemLength(Data->Item);
-    auto itemData = ReceiveBuffer.subspan(Offset, length);
-    if (Data->Index != 255)
+    constexpr BYTE BUY_FAILED = 0xFE;
+    constexpr BYTE BUY_FAILED_SILENT = 0xFF;
+
+    auto Offset = sizeof(PHEADER_DEFAULT_ITEM_EXTENDED_HEAD);
+    auto itemData = ReceiveBuffer.subspan(Offset);
+    if (itemData.size() > 0)
+    {
+        int length = CalcItemLength(itemData);
+        itemData = itemData.subspan(0, length);
+    }
+
+    if (Data->Index == BUY_FAILED)
+    {
+        g_pNewUISystem->HideAll();
+        g_pChatListBox->AddText(Hero->ID, GlobalText[732], SEASON3B::TYPE_ERROR_MESSAGE);
+    }
+    else if (Data->Index == BUY_FAILED_SILENT)
+    {
+        // do nothing, error message is sent separately.
+    }
+    else
     {
         if (Data->Index >= MAX_EQUIPMENT_INDEX && Data->Index < MAX_MY_INVENTORY_INDEX)
         {
@@ -6314,12 +6273,7 @@ void ReceiveBuyExtended(const std::span<const BYTE> ReceiveBuffer)
 
         PlayBuffer(SOUND_GET_ITEM01);
     }
-    if (Data->Index == 0xfe)
-    {
-        g_pNewUISystem->HideAll();
 
-        g_pChatListBox->AddText(Hero->ID, GlobalText[732], SEASON3B::TYPE_ERROR_MESSAGE);
-    }
     BuyCost = 0;
 
     g_ConsoleDebug->Write(MCD_RECEIVE, L"0x32 [ReceiveBuy(%d)]", Data->Index);
@@ -6335,8 +6289,10 @@ void ReceiveTradeYourInventoryExtended(std::span<const BYTE> ReceiveBuffer)
     }
 
     auto Offset = sizeof(PBMSG_HEADER) + 1;
-    int length = CalcItemLength(Data->Item);
-    auto itemData = ReceiveBuffer.subspan(Offset, length);
+    auto itemData = ReceiveBuffer.subspan(Offset);
+    int length = CalcItemLength(itemData);
+    itemData = itemData.subspan(0, length);
+
     g_pTrade->ProcessToReceiveYourItemAdd(Data->Index, itemData);
 }
 
@@ -6350,8 +6306,9 @@ void ReceiveMixExtended(std::span<const BYTE> ReceiveBuffer)
     }
 
     auto Offset = sizeof(PBMSG_HEADER) + 1;
-    int length = CalcItemLength(Data->Item);
-    auto itemData = ReceiveBuffer.subspan(Offset, length);
+    auto itemData = ReceiveBuffer.subspan(Offset);
+    int length = CalcItemLength(itemData);
+    itemData = itemData.subspan(0, length);
 
     switch (Data->Index)
     {
@@ -6667,6 +6624,18 @@ void ReceiveAddPointExtended(const BYTE* ReceiveBuffer)
     CharacterAttribute->ManaMax = Data->MaxMana;
     CharacterAttribute->SkillManaMax = Data->SkillManaMax;
     CharacterAttribute->ShieldMax = Data->ShieldMax;
+
+    CharacterMachine->CalculateAll();
+}
+
+void ReceiveSetPointsExtended(const BYTE* ReceiveBuffer)
+{
+    auto Data = (LPPRECEIVE_SET_POINTS_EXTENDED)ReceiveBuffer;
+    CharacterAttribute->Strength = Data->Strength;
+    CharacterAttribute->Dexterity = Data->Dexterity;
+    CharacterAttribute->Vitality = Data->Vitality;
+    CharacterAttribute->Energy = Data->Energy;
+    CharacterAttribute->Charisma = Data->Charisma;
 
     CharacterMachine->CalculateAll();
 }
@@ -8966,8 +8935,15 @@ void ReceiveCreateShopTitleViewport(const BYTE* ReceiveBuffer)
         if (index >= 0 && index < MAX_CHARACTERS_CLIENT) {
             CHARACTER* pPlayer = &CharactersClient[index];
 
-            wchar_t szShopTitle[40]{};
+            wchar_t szShopTitle[MAX_SHOPTITLE + 1] { };
             CMultiLanguage::ConvertFromUtf8(szShopTitle, pShopTitle->szTitle, MAX_SHOPTITLE);
+
+            if (pPlayer == Hero)
+            {
+                wcscpy(g_szPersonalShopTitle, szShopTitle);
+                g_pMyShopInventory->SetTitle(szShopTitle);
+                g_pMyShopInventory->ChangePersonal(true);
+            }
 
             AddShopTitle(key, pPlayer, szShopTitle);
         }
@@ -9093,9 +9069,11 @@ void ReceivePersonalShopItemList(std::span<const BYTE> ReceiveBuffer)
                 assert(false);
                 return;
             }
-            int length = CalcItemLength(pShopItem->Item);
+
             Offset+=9;
-            auto itemData = ReceiveBuffer.subspan(Offset, length);
+            auto itemData = ReceiveBuffer.subspan(Offset);
+            int length = CalcItemLength(itemData);
+            itemData = itemData.subspan(0, length);
 
             // todo: use item prices as well when the UI is ready
             if (pShopItem->MoneyPrice > 0)
@@ -9152,7 +9130,39 @@ void ReceiveRefreshItemList(std::span<const BYTE> ReceiveBuffer)
     }
 
     int Offset = sizeof(GETPSHOPITEMLIST_HEADERINFO);
-    if (Header->byResult == Success && g_IsPurchaseShop == PSHOPWNDTYPE_PURCHASE)
+    int key = MAKEWORD(Header->byIndexL, Header->byIndexH);
+    if (Header->byResult == Success && Hero->Key == key)
+    {
+        g_pMyShopInventory->GetInventoryCtrl()->RemoveAllItems();
+        for (int i = 0; i < Header->ItemCount; i++)
+        {
+            auto pShopItem = safe_cast<GETPSHOPITEM_DATAINFO>(ReceiveBuffer.subspan(Offset));
+            if (pShopItem == nullptr)
+            {
+                assert(false);
+                return;
+            }
+
+            Offset += 9;
+            auto itemData = ReceiveBuffer.subspan(Offset);
+            int length = CalcItemLength(itemData);
+            itemData = itemData.subspan(0, length);
+
+            g_pMyShopInventory->InsertItem(pShopItem->ItemSlot, itemData);
+            AddPersonalItemPrice(pShopItem->ItemSlot, pShopItem->MoneyPrice, PSHOPWNDTYPE_SALE);
+
+            Offset += length;
+        }
+
+        g_pMyShopInventory->ChangePersonal(true);
+        g_bEnablePersonalShop = true;
+        wchar_t shopName[MAX_SHOPTITLE + 1]{};
+        CMultiLanguage::ConvertFromUtf8(shopName, Header->szShopTitle, MAX_SHOPTITLE);
+        wcscpy(g_szPersonalShopTitle, shopName);
+        AddShopTitle(key, Hero, shopName);
+        g_pMyShopInventory->ChangeTitle(shopName);
+    }
+    else if (Header->byResult == Success && g_IsPurchaseShop == PSHOPWNDTYPE_PURCHASE)
     {
         g_pPurchaseShopInventory->GetInventoryCtrl()->RemoveAllItems();
 
@@ -9165,9 +9175,10 @@ void ReceiveRefreshItemList(std::span<const BYTE> ReceiveBuffer)
                 return;
             }
 
-            int length = CalcItemLength(pShopItem->Item);
             Offset += 9;
-            auto itemData = ReceiveBuffer.subspan(Offset, length);
+            auto itemData = ReceiveBuffer.subspan(Offset);
+            int length = CalcItemLength(itemData);
+            itemData = itemData.subspan(0, length);
 
             g_pPurchaseShopInventory->InsertItem(pShopItem->ItemSlot, itemData);
             AddPersonalItemPrice(pShopItem->ItemSlot, pShopItem->MoneyPrice, PSHOPWNDTYPE_PURCHASE);
@@ -9215,11 +9226,6 @@ void ReceivePurchaseItem(std::span<const BYTE> ReceiveBuffer)
         auto itemindex = Header->ItemSlot;
         auto offset = sizeof(PURCHASEITEM_RESULTINFO);
         auto itemData = ReceiveBuffer.subspan(offset);
-        if (CalcItemLength(itemData) < itemData.size())
-        {
-            assert(false);
-            return;
-        }
 
         if (itemindex >= MAX_EQUIPMENT_INDEX && itemindex < MAX_MY_INVENTORY_INDEX)
         {
@@ -9440,7 +9446,7 @@ void ReceiveRequestAcceptAddFriend(const BYTE* ReceiveBuffer)
     CMultiLanguage::ConvertFromUtf8(szText, Data->Name, MAX_ID_SIZE);
     szText[MAX_ID_SIZE] = '\0';
 
-    wcscat(szText, GlobalText[1051]);
+    swprintf(szText, L"%s %s", szText, GlobalText[1051]); // " has requested to list you as a friend."
 
     if (g_pNewUISystem->IsVisible(SEASON3B::INTERFACE_FRIEND) == false)
     {
@@ -9568,19 +9574,17 @@ void ReceiveLetter(const BYTE* ReceiveBuffer)
 {
     auto Data = (LPFS_LETTER_ALERT)ReceiveBuffer;
 
-    wchar_t szDate[16] = { 0 };
-    CMultiLanguage::ConvertFromUtf8(szDate, Data->Name + 11, 10);
-    szDate[10] = '\0';
+    wchar_t szDate[MAX_LETTER_DATE_LENGTH + 1] = { };
+    CMultiLanguage::ConvertFromUtf8(szDate, Data->Date, MAX_LETTER_DATE_LENGTH);
 
-    wchar_t szTime[16] = { 0 };
-    CMultiLanguage::ConvertFromUtf8(szTime, Data->Name + 11, 8);
-    szTime[8] = '\0';
+    wchar_t szTime[MAX_LETTER_TIME_LENGTH + 1] = { };
+    CMultiLanguage::ConvertFromUtf8(szTime, Data->Time, MAX_LETTER_TIME_LENGTH);
 
-    wchar_t szName[MAX_ID_SIZE + 1] = { 0 };
+    wchar_t szName[MAX_ID_SIZE + 1] = { };
     CMultiLanguage::ConvertFromUtf8(szName, Data->Name, MAX_ID_SIZE);
     szName[MAX_ID_SIZE] = '\0';
 
-    wchar_t szSubject[MAX_TEXT_LENGTH + 1] = { 0 };
+    wchar_t szSubject[MAX_TEXT_LENGTH + 1] = { };
     CMultiLanguage::ConvertFromUtf8(szSubject, Data->Subject, MAX_ID_SIZE);
     szSubject[MAX_ID_SIZE] = '\0';
 
@@ -9612,28 +9616,34 @@ void ReceiveLetter(const BYTE* ReceiveBuffer)
 
 extern int g_iLetterReadNextPos_x, g_iLetterReadNextPos_y;
 
-void ReceiveLetterText(std::span<const BYTE> ReceiveBuffer)
+void ReceiveLetterText(std::span<const BYTE> ReceiveBuffer, bool isCached)
 {
-    auto Data = safe_cast<FS_LETTER_TEXT>(ReceiveBuffer);
+    auto Data = safe_cast<FS_LETTER_TEXT_HEADER>(ReceiveBuffer);
     if (Data == nullptr)
     {
         assert(false);
         return;
     }
 
-    g_pLetterList->CacheLetterText(Data->Index, Data);
+    if (!isCached)
+    {
+        // Cache it if you can :)
+        auto CopiedData = new FS_LETTER_TEXT();
+        memcpy(CopiedData, ReceiveBuffer.data(), ReceiveBuffer.size());
+        g_pLetterList->CacheLetterText(Data->Index, CopiedData);
+    }
 
-    auto pLetter = g_pLetterList->GetLetter(Data->Index);
-    if (pLetter == nullptr)
+    auto pLetterHead = g_pLetterList->GetLetter(Data->Index);
+    if (pLetterHead == nullptr)
     {
         return;
     }
 
-    pLetter->m_bIsRead = TRUE;
+    pLetterHead->m_bIsRead = TRUE;
     g_pWindowMgr->RefreshMainWndLetterList();
 
     wchar_t tempTxt[MAX_TEXT_LENGTH + 1];
-    swprintf(tempTxt, GlobalText[1054], pLetter->m_szText);
+    swprintf(tempTxt, GlobalText[1054], pLetterHead->m_szText);
     DWORD dwUIID = 0;
     if (g_iLetterReadNextPos_x == UIWND_DEFAULT)
     {
@@ -9646,13 +9656,15 @@ void ReceiveLetterText(std::span<const BYTE> ReceiveBuffer)
     }
 
     auto* pWindow = (CUILetterReadWindow*)g_pWindowMgr->GetWindow(dwUIID);
-    wchar_t szText[1000 + 1] = { 0 };
-    CMultiLanguage::ConvertFromUtf8(szText, Data->Memo, 1000);
-    szText[1000] = '\0';
-    pWindow->SetLetter(pLetter, szText);
-    g_pWindowMgr->SetLetterReadWindow(pLetter->m_dwLetterID, dwUIID);
+    auto* pLetterText = (char*)ReceiveBuffer.subspan(sizeof(FS_LETTER_TEXT_HEADER)).data();
+    wchar_t letterText[1000 + 1] = { };
+    CMultiLanguage::ConvertFromUtf8(letterText, pLetterText, MAX_LETTERTEXT_LENGTH);
+    letterText[MAX_LETTERTEXT_LENGTH] = '\0';
+    pWindow->SetLetter(pLetterHead, letterText);
 
-    if (wcsnicmp(pLetter->m_szID, L"webzen", MAX_ID_SIZE) == 0)
+    g_pWindowMgr->SetLetterReadWindow(pLetterHead->m_dwLetterID, dwUIID);
+
+    if (wcsnicmp(pLetterHead->m_szID, L"webzen", MAX_ID_SIZE) == 0)
     {
         pWindow->m_Photo.SetWebzenMail(TRUE);
     }
@@ -9695,8 +9707,8 @@ void ReceiveCreateChatRoomResult(const BYTE* ReceiveBuffer)
     wchar_t szName[MAX_ID_SIZE + 1] = { 0 };
     CMultiLanguage::ConvertFromUtf8(szName, Data->ID, MAX_ID_SIZE);
 
-    wchar_t szIP[16];
-    CMultiLanguage::ConvertFromUtf8(szIP, Data->IP, 15);
+    wchar_t szIP[sizeof(Data->IP) + 1] { };
+    CMultiLanguage::ConvertFromUtf8(szIP, Data->IP, sizeof(Data->IP));
 
     switch (Data->Result)
     {
@@ -9705,9 +9717,9 @@ void ReceiveCreateChatRoomResult(const BYTE* ReceiveBuffer)
         g_pWindowMgr->AddWindow(UIWNDTYPE_OK_FORCE, UIWND_DEFAULT, UIWND_DEFAULT, GlobalText[1069]);
         break;
     case 0x01:
+        g_pFriendMenu->RemoveRequestWindow(szName);
         if (Data->Type == 0)
         {
-            g_pFriendMenu->RemoveRequestWindow(szName);
             DWORD dwUIID = g_pWindowMgr->AddWindow(UIWNDTYPE_CHAT, 100, 100, GlobalText[994]);
             ((CUIChatWindow*)g_pWindowMgr->GetWindow(dwUIID))->ConnectToChatServer(szIP, Data->RoomNumber, Data->Ticket);
         }
@@ -9720,19 +9732,15 @@ void ReceiveCreateChatRoomResult(const BYTE* ReceiveBuffer)
                 ((CUIChatWindow*)g_pWindowMgr->GetWindow(dwUIID))->ConnectToChatServer(szIP, Data->RoomNumber, Data->Ticket);
                 g_pWindowMgr->GetWindow(dwUIID)->SetState(UISTATE_READY);
                 g_pWindowMgr->SendUIMessage(UI_MESSAGE_BOTTOM, dwUIID, 0);
-                if (g_pWindowMgr->GetFriendMainWindow() != NULL)
-                    g_pWindowMgr->GetFriendMainWindow()->RemoveWindow(dwUIID);
+
+                g_pWindowMgr->GetWindow(dwUIID)->SetState(UISTATE_HIDE);
+                g_pWindowMgr->SendUIMessage(UI_MESSAGE_SELECT, dwUIID, 0);
             }
             else if (dwUIID == -1);
             else
             {
                 ((CUIChatWindow*)g_pWindowMgr->GetWindow(dwUIID))->DisconnectToChatServer();
                 ((CUIChatWindow*)g_pWindowMgr->GetWindow(dwUIID))->ConnectToChatServer(szIP, Data->RoomNumber, Data->Ticket);
-
-                //				SendRequestCRDisconnectRoom(((CUIChatWindow *)g_pWindowMgr->GetWindow(dwUIID))->GetCurrentSocket());
-                //				DWORD dwOldRoomNumber = ((CUIChatWindow *)g_pWindowMgr->GetWindow(dwUIID))->GetRoomNumber();
-                //				((CUIChatWindow *)g_pWindowMgr->GetWindow(dwUIID))->ConnectToChatServer((char *)szIP, Data->RoomNumber, Data->Ticket);
-                //				g_pChatRoomSocketList->RemoveChatRoomSocket(dwOldRoomNumber);
             }
         }
         else if (Data->Type == 2)
@@ -9741,8 +9749,6 @@ void ReceiveCreateChatRoomResult(const BYTE* ReceiveBuffer)
             ((CUIChatWindow*)g_pWindowMgr->GetWindow(dwUIID))->ConnectToChatServer(szIP, Data->RoomNumber, Data->Ticket);
             g_pWindowMgr->GetWindow(dwUIID)->SetState(UISTATE_READY);
             g_pWindowMgr->SendUIMessage(UI_MESSAGE_BOTTOM, dwUIID, 0);
-            if (g_pWindowMgr->GetFriendMainWindow() != NULL)
-                g_pWindowMgr->GetFriendMainWindow()->RemoveWindow(dwUIID);
         }
         break;
     case 0x02:
@@ -13057,7 +13063,7 @@ void ReceiveDarkside(const BYTE* ReceiveBuffer)
     }
 }
 
-static void HandleIncomingPacket(int32_t Handle, const BYTE* ReceiveBuffer, int32_t Size)
+static void ProcessPacket(const BYTE* ReceiveBuffer, int32_t Size)
 {
     auto received_span = std::span<const BYTE>(ReceiveBuffer, Size);
     BYTE HeadCode = 0;
@@ -13278,6 +13284,9 @@ static void HandleIncomingPacket(int32_t Handle, const BYTE* ReceiveBuffer, int3
             break;
         case 0x30:
             ReceiveOption(ReceiveBuffer);
+            break;
+        case 0x32:
+            ReceiveSetPointsExtended(ReceiveBuffer);
             break;
         case 0x40:
             ReceiveServerCommand(ReceiveBuffer);
@@ -14280,7 +14289,7 @@ static void HandleIncomingPacket(int32_t Handle, const BYTE* ReceiveBuffer, int3
         ReceiveLetter(ReceiveBuffer);
         break;
     case 0xC7:
-        ReceiveLetterText(received_span);
+        ReceiveLetterText(received_span, false);
         break;
     case 0xC8:
         ReceiveLetterDeleteResult(ReceiveBuffer);
@@ -14547,19 +14556,25 @@ static void HandleIncomingPacket(int32_t Handle, const BYTE* ReceiveBuffer, int3
     //return ( TRUE);
 }
 
-static void HandleIncomingPacketLocked(int32_t Handle, const BYTE* ReceiveBuffer, int32_t Size)
+void ProcessPacketCallback(const PacketInfo* Packet)
 {
-    g_render_lock->lock();
-    wglMakeCurrent(g_hDC, g_hRC);
     try
     {
-        HandleIncomingPacket(Handle, ReceiveBuffer, Size);
+        ProcessPacket(Packet->ReceiveBuffer.get(), Packet->Size);
     }
     catch (const std::exception&)
     {
     }
-    wglMakeCurrent(nullptr, nullptr);
-    g_render_lock->unlock();
+}
+
+static void HandleIncomingPacket(int32_t Handle, const BYTE* ReceiveBuffer, int32_t Size)
+{
+    auto Packet = std::make_unique<PacketInfo>();
+    Packet->ReceiveBuffer = std::make_unique<BYTE[]>(Size);
+    std::copy(ReceiveBuffer, ReceiveBuffer + Size, Packet->ReceiveBuffer.get());
+    Packet->Size = Size;
+
+    PostMessage(g_hWnd, WM_RECEIVE_BUFFER, reinterpret_cast<WPARAM>(Packet.release()), 0);
 }
 
 bool CheckExceptionBuff(eBuffState buff, OBJECT* o, bool iserase)

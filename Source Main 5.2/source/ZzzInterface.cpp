@@ -531,13 +531,13 @@ void CreateNotice(wchar_t* Text, int Color)
     }
     else
     {
-        wchar_t Temp1[256];
-        wchar_t Temp2[256];
-        CutText(Text, Temp1, Temp2);
-        wcscpy(Notice[NoticeCount++].Text, Temp2);
+        wchar_t TopText[256] = { 0 };
+        wchar_t BottomText[256] = { 0 };
+        CutText(Text, TopText, BottomText, 256);
+        wcscpy(Notice[NoticeCount++].Text, TopText);
         ScrollNotice();
         Notice[NoticeCount].Color = Color;
-        wcscpy(Notice[NoticeCount++].Text, Temp1);
+        wcscpy(Notice[NoticeCount++].Text, BottomText);
     }
     NoticeTime = 300;
 }
@@ -600,39 +600,28 @@ void RenderNotices()
     NoticeInverse += FPS_ANIMATION_FACTOR;
 }
 
-void CutText(const wchar_t* Text, wchar_t* Text1, wchar_t* Text2)
+void CutText(const wchar_t* Text, wchar_t* Text1, wchar_t* Text2, size_t maxLength)
 {
     auto sourceText = std::wstring(Text);
     auto halfLength = sourceText.length() / 2;
-    auto offset = 0;
-    while (offset < sourceText.length())
+    size_t splitOffset = sourceText.find_last_of(L' ', halfLength);
+
+    if (splitOffset == std::wstring::npos)
     {
-        const auto nextSpaceAt = sourceText.find(L' ', offset + 1);
-        if (nextSpaceAt >= halfLength)
-        {
-            // now where above the halfway so we check if the next or previous space is closer
-
-            int splitOffset = offset;
-            if (nextSpaceAt - halfLength < halfLength - offset)
-            {
-                // next space is closer
-                splitOffset = nextSpaceAt;
-            }
-
-            wcsncpy(Text2, Text, splitOffset);
-            Text2[splitOffset] = '\0';
-
-            const auto restCount = sourceText.length() - splitOffset - 1;
-            wcsncpy(Text1, Text + splitOffset + 1, restCount);
-            Text1[restCount] = '\0';
-            return;
-        }
-
-        offset = nextSpaceAt;
+        splitOffset = sourceText.find_first_of(L' ', halfLength);
     }
 
-    wcsncpy(Text1, Text, wcslen(Text1));
-    Text2[0] = L'\0';
+    if (splitOffset != std::wstring::npos)
+    {
+        wcsncpy_s(Text1, maxLength, sourceText.substr(0, splitOffset).c_str(), _TRUNCATE);
+        wcsncpy_s(Text2, maxLength, sourceText.substr(splitOffset + 1).c_str(), _TRUNCATE);
+    }
+    else
+    {
+        // No spaces found, assign everything to Text1
+        wcsncpy_s(Text1, maxLength, sourceText.c_str(), _TRUNCATE);
+        Text2[0] = L'\0';  // Empty Text2
+    }
 }
 
 int     WhisperID_Num = 0;
@@ -1022,7 +1011,7 @@ void AddChat(CHAT* c, const wchar_t* chat_text, int flag)
 
     if (Length >= 20)
     {
-        CutText(chat_text, c->Text[0], c->Text[1]);
+        CutText(chat_text, c->Text[1], c->Text[0], 256);
         c->LifeTime[0] = Time;
         c->LifeTime[1] = Time;
     }
@@ -1586,6 +1575,11 @@ bool CheckAttack()
 
     CHARACTER* c = &CharactersClient[SelectedCharacter];
 
+    if (c->Dead > 0)
+    {
+        return false;
+    }
+
     if (gMapManager.InChaosCastle() == true && c != Hero)
     {
         return true;
@@ -2040,6 +2034,8 @@ bool SkillWarrior(CHARACTER* c, ITEM* p)
     }
     int Skill = CharacterAttribute->Skill[g_MovementSkill.m_iSkill];
     if (Skill == AT_SKILL_RIDER
+        || Skill == AT_SKILL_REDUCEDEFENSE
+        || Skill == AT_SKILL_WHEEL
         || Skill == AT_SKILL_DEATHSTAB
         || (AT_SKILL_BLOW_UP <= Skill && Skill <= AT_SKILL_BLOW_UP + 4)
         || (Skill == AT_SKILL_SPEAR && (Hero->Helper.Type == MODEL_HORN_OF_UNIRIA || Hero->Helper.Type == MODEL_HORN_OF_DINORANT || Hero->Helper.Type == MODEL_DARK_HORSE_ITEM || Hero->Helper.Type == MODEL_HORN_OF_FENRIR))
@@ -2187,7 +2183,6 @@ bool SkillWarrior(CHARACTER* c, ITEM* p)
 void UseSkillWarrior(CHARACTER* c, OBJECT* o)
 {
     int Skill = g_MovementSkill.m_bMagic ? CharacterAttribute->Skill[g_MovementSkill.m_iSkill] : g_MovementSkill.m_iSkill;
-
     LetHeroStop();
     c->Movement = false;
     if (o->Type == MODEL_PLAYER)
@@ -2209,6 +2204,10 @@ void UseSkillWarrior(CHARACTER* c, OBJECT* o)
         case AT_SKILL_BLOW_UP + 4:
         case AT_SKILL_DEATHSTAB:
             SetAction(o, PLAYER_ATTACK_DEATHSTAB);
+            break;
+        case AT_SKILL_WHEEL:
+        case AT_SKILL_REDUCEDEFENSE:
+            SetAction(o, PLAYER_ATTACK_SKILL_WHEEL);
             break;
         case AT_SKILL_RIDER:
             //		    SendRequestMagic(Skill,CharactersClient[g_MovementSkill.m_iTarget].Key);
@@ -2270,7 +2269,23 @@ void UseSkillWarrior(CHARACTER* c, OBJECT* o)
     o->Angle[2] = CreateAngle2D(o->Position, c->TargetPosition);
 
     if (Skill != AT_SKILL_GAOTIC)
-        SendRequestMagic(Skill, CharactersClient[g_MovementSkill.m_iTarget].Key);
+    {
+        if (Skill == AT_SKILL_WHEEL
+            || Skill == AT_SKILL_REDUCEDEFENSE)
+        {
+            WORD TKey = 0xffff;
+            if (g_MovementSkill.m_iTarget != -1)
+            {
+                TKey = getTargetCharacterKey(c, g_MovementSkill.m_iTarget);
+            }
+            SendRequestMagicContinue(Skill, (c->PositionX), (c->PositionY), 
+                (BYTE)(o->Angle[2] / 360.f * 256.f), 0, 0, TKey, 0);
+        }
+        else
+        {
+            SendRequestMagic(Skill, CharactersClient[g_MovementSkill.m_iTarget].Key);
+        }
+    }
 
     if (((!g_isCharacterBuff(o, eDeBuff_Harden)) && c->Helper.Type != MODEL_DARK_HORSE_ITEM)
         && Skill != AT_SKILL_DARK_SCREAM
@@ -3416,6 +3431,7 @@ void Action(CHARACTER* c, OBJECT* o, bool Now)
                 }
             }
             break;
+        case AT_SKILL_WHEEL:
         case AT_SKILL_REDUCEDEFENSE:
         {
             AttackKnight(c, iSkill, Distance);
@@ -5155,7 +5171,6 @@ void AttackKnight(CHARACTER* c, int Skill, float Distance)
         || Skill == AT_SKILL_PLASMA_STORM_FENRIR
         || Skill == AT_SKILL_DARK_SCREAM
         || (AT_SKILL_FIRE_SCREAM_UP <= Skill && Skill <= AT_SKILL_FIRE_SCREAM_UP + 4)
-        || Skill == AT_SKILL_WHEEL
         || (AT_SKILL_TORNADO_SWORDA_UP <= Skill && Skill <= AT_SKILL_TORNADO_SWORDA_UP + 4)
         || (AT_SKILL_TORNADO_SWORDB_UP <= Skill && Skill <= AT_SKILL_TORNADO_SWORDB_UP + 4)
         || Skill == AT_SKILL_GIGANTIC_STORM
@@ -5258,7 +5273,6 @@ void AttackKnight(CHARACTER* c, int Skill, float Distance)
             case AT_SKILL_TORNADO_SWORDB_UP + 2:
             case AT_SKILL_TORNADO_SWORDB_UP + 3:
             case AT_SKILL_TORNADO_SWORDB_UP + 4:
-            case AT_SKILL_WHEEL:
                 o->Angle[2] = CreateAngle2D(o->Position, c->TargetPosition);
                 {
                     BYTE PathX[1];
@@ -5286,6 +5300,7 @@ void AttackKnight(CHARACTER* c, int Skill, float Distance)
             case AT_SKILL_BLOOD_ATT_UP + 2:
             case AT_SKILL_BLOOD_ATT_UP + 3:
             case AT_SKILL_BLOOD_ATT_UP + 4:
+            case AT_SKILL_WHEEL:
             case AT_SKILL_REDUCEDEFENSE:
                 o->Angle[2] = CreateAngle2D(o->Position, c->TargetPosition);
                 {
@@ -6823,7 +6838,7 @@ bool CanExecuteSkill(CHARACTER* c, int Skill, float Distance)
 {
     OBJECT* o = &c->Object;
 
-    if (c->Dead)
+    if (c->Dead > 0)
     {
         return false;
     }
@@ -7457,7 +7472,7 @@ void MoveHero()
     {
         StandTime++;
 
-        if (StandTime >= 40 && !MouseOnWindow && !Hero->Dead &&
+        if (StandTime >= 40 && !MouseOnWindow && Hero->Dead == 0 &&
             o->CurrentAction != PLAYER_POSE1 && o->CurrentAction != PLAYER_POSE_FEMALE1 &&
             o->CurrentAction != PLAYER_SIT1 && o->CurrentAction != PLAYER_SIT_FEMALE1 && NoAutoAttacking &&
             o->CurrentAction != PLAYER_ATTACK_TELEPORT &&

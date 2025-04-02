@@ -262,6 +262,11 @@ typedef struct {
 typedef struct {
     PBMSG_HEADER  Header;
     BYTE          Index;
+} PHEADER_DEFAULT_ITEM_EXTENDED_HEAD, * LPPHEADER_DEFAULT_ITEM_EXTENDED_HEAD;
+
+typedef struct {
+    PBMSG_HEADER  Header;
+    BYTE          Index;
     BYTE          Item[PACKET_ITEM_LENGTH_EXTENDED_MIN];
 } PHEADER_DEFAULT_ITEM_EXTENDED, * LPPHEADER_DEFAULT_ITEM_EXTENDED;
 
@@ -834,6 +839,16 @@ typedef struct {
     DWORD		 ShieldMax;     // 16
     DWORD		 SkillManaMax;  // 20
 } PRECEIVE_ADD_POINT_EXTENDED, * LPPRECEIVE_ADD_POINT_EXTENDED;
+
+typedef struct {
+    PBMSG_HEADER Header;
+    BYTE         SubCode;       // 3
+    DWORD        Strength;      // 4
+    DWORD        Dexterity;     // 8
+    DWORD		 Vitality;      // 12
+    DWORD		 Energy;        // 16
+    DWORD		 Charisma;      // 20
+} PRECEIVE_SET_POINTS_EXTENDED, * LPPRECEIVE_SET_POINTS_EXTENDED;
 
 typedef struct {
     PBMSG_HEADER Header;
@@ -1739,21 +1754,35 @@ typedef struct {
     PBMSG_HEADER    Header;
     WORD			Index;
     char			Name[MAX_ID_SIZE];
-    char			Date[30];
+    char			Date[MAX_LETTER_DATE_LENGTH];
+    char            Separator;
+    char			Time[MAX_LETTER_TIME_LENGTH];
+    char            Reserved[30 - MAX_LETTER_DATE_LENGTH - MAX_LETTER_TIME_LENGTH - 1];
     char			Subject[MAX_LETTER_TITLE_LENGTH];
     BYTE			Read;
 } FS_LETTER_ALERT, * LPFS_LETTER_ALERT;
 
 typedef struct {
     PWMSG_HEADER    Header;
-    WORD			Index;
-    WORD			MemoSize;
-    SERVER_CLASS_TYPE			Class;
+    WORD            Index;
+    SERVER_CLASS_TYPE Class;
     BYTE            Flags;
-    BYTE			Equipment[EQUIPMENT_LENGTH_EXTENDED];
-    BYTE			PhotoDir;
-    BYTE			PhotoAction;
-    char			Memo[MAX_LETTERTEXT_LENGTH];
+    BYTE            Equipment[EQUIPMENT_LENGTH_EXTENDED];
+    BYTE            Reserved[40 - EQUIPMENT_LENGTH_EXTENDED];
+    BYTE            PhotoDir;
+    BYTE            PhotoAction;
+} FS_LETTER_TEXT_HEADER, * LPFS_LETTER_TEXT_HEADER;
+
+typedef struct {
+    PWMSG_HEADER    Header;
+    WORD            Index;
+    SERVER_CLASS_TYPE Class;
+    BYTE            Flags;
+    BYTE            Equipment[EQUIPMENT_LENGTH_EXTENDED];
+    BYTE            Reserved[40 - EQUIPMENT_LENGTH_EXTENDED];
+    BYTE            PhotoDir;
+    BYTE            PhotoAction;
+    char            Memo[MAX_LETTERTEXT_LENGTH];
 } FS_LETTER_TEXT, * LPFS_LETTER_TEXT;
 
 typedef struct {
@@ -3471,10 +3500,12 @@ typedef struct {
     WORD		 TargerIndex[DARKSIDE_TARGET_MAX];
 } PRECEIVE_DARKSIDE_INDEX, * LPPRECEIVE_DARKSIDE_INDEX;
 
+
 //////////////////////////////////////////////////////////////////////////
 // ?????????????????????????????????????
 //////////////////////////////////////////////////////////////////////////
 extern Connection* SocketClient;
+extern bool EnableSocket;
 extern int HeroKey;
 
 extern int SummonLife;
@@ -3507,7 +3538,13 @@ void ReceiveCharacterList(const BYTE* ReceiveBuffer);
 void ReceiveMovePosition(const BYTE* ReceiveBuffer);
 void ReceiveMoveCharacter(const BYTE* ReceiveBuffer);
 //BOOL TranslateProtocol(int HeadCode,BYTE* ReceiveBuffer,int Size,BOOL bEncrypted);
-//static void HandleIncomingPacket(int32_t Handle, const BYTE* ReceiveBuffer, int32_t Size);
+
+struct PacketInfo
+{
+    std::unique_ptr<BYTE[]> ReceiveBuffer;
+    int32_t Size;
+};
+void ProcessPacketCallback(const PacketInfo* Packet);
 
 void InitGame();
 void InitGuildWar();

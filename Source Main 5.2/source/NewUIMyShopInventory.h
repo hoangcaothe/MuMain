@@ -78,9 +78,11 @@ namespace SEASON3B
         void ChangeTargetIndex(int tindex);
         const int GetTargetIndex();
         ITEM* FindItem(int iLinealPos);
+        int GetItemInventoryIndex(ITEM* pItem);
         void ChangeEditBox(const UISTATES type);
-        void ChangeTitle(std::wstring& titletext);
+        void ChangeTitle(wchar_t* titletext);
         void GetTitle(wchar_t* titletext);
+        void SetTitle(wchar_t* titletext);
         void ChangePersonal(bool state);
         const bool IsEnablePersonalShop() const;
         void OpenButtonLock();
@@ -117,9 +119,9 @@ namespace SEASON3B
     };
 
     inline
-        void CNewUIMyShopInventory::ChangeTitle(std::wstring& titletext)
+        void CNewUIMyShopInventory::ChangeTitle(wchar_t* titletext)
     {
-        m_EditBox->SetText(titletext.c_str());
+        m_EditBox->SetText(titletext);
     }
 
     inline

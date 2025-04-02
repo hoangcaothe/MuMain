@@ -157,7 +157,7 @@ public:
     BYTE        AttackFlag;
     
     BYTE        TargetAngle;
-    BYTE        Dead;
+    float        Dead; // Number of reference frames after death
     WORD		Skill;
     BYTE        SwordCount;
     BYTE		byExtensionSkill;
@@ -166,7 +166,7 @@ public:
     BYTE        TargetY;
     BYTE        SkillX;
     BYTE        SkillY;
-    BYTE        Appear;
+    float        Appear;
     BYTE	    CurrentSkill;
     BYTE        CastRenderTime; // unused?
     BYTE        m_byFriend;

@@ -1203,7 +1203,7 @@ void SetPlayerTeleport(CHARACTER* c)
 
 void SetPlayerShock(CHARACTER* c, int Hit)
 {
-    if (c->Dead) return;
+    if (c->Dead > 0) return;
     if (c->Helper.Type == MODEL_HORN_OF_UNIRIA || c->Helper.Type == MODEL_HORN_OF_DINORANT) return;
     if (c->Helper.Type == MODEL_DARK_HORSE_ITEM) return;
 
@@ -3089,7 +3089,7 @@ void DeadCharacter(CHARACTER* c, OBJECT* o, BMD* b)
             FallingCharacter(c, o);
             startDeadTime = 15;
         }
-        if (c->Dead <= startDeadTime && c->Dead >= startDeadTime - 10 && (c->Dead % 2))
+        if (c->Dead <= startDeadTime && c->Dead >= startDeadTime - 10 && (((int)c->Dead) % 2))
         {
             vec3_t Position;
 
@@ -3893,7 +3893,7 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
 
     if (c->Dead > 0)
     {
-        c->Dead++;
+        c->Dead += FPS_ANIMATION_FACTOR;
         if (c->Dead >= 15)
         {
             SetPlayerDie(c);
@@ -5527,7 +5527,7 @@ void MoveCharacterVisual(CHARACTER* c, OBJECT* o)
         float Luminosity = 0.8f;
         if (c->Appear > 0)
         {
-            c->Appear--;
+            c->Appear -= FPS_ANIMATION_FACTOR;
             for (int i = 0; i < 20; i++)
             {
                 Vector(1.f, 1.f, 1.f, o->Light);
@@ -5540,6 +5540,11 @@ void MoveCharacterVisual(CHARACTER* c, OBJECT* o)
                     CreateEffect(MODEL_STONE1 + rand() % 2, o->Position, o->Angle, o->Light);
             }
         }
+        else
+        {
+            c->Appear = 0;
+        }
+
         if (c->PK < PVP_MURDERER2)
         {
             for (int j = 0; j < 2; j++)
@@ -11471,7 +11476,7 @@ void CreateCharacterPointer(CHARACTER* c, int Type, unsigned char PositionX, uns
     o->ContrastEnable = false;
     o->EnableBoneMatrix = true;
     o->EnableShadow = false;
-    c->Dead = false;
+    c->Dead = 0;
     c->Blood = false;
     c->GuildTeam = 0;
     c->Run = 0;

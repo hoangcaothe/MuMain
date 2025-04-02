@@ -35,6 +35,7 @@
 #include "./ExternalObject/leaf/ExceptionHandler.h"
 #include "./Utilities/Dump/CrashReporter.h"
 #include "./Utilities/Log/muConsoleDebug.h"
+#include "./Utilities/CpuUsage.h"
 #include "ProtocolSend.h"
 #include "ProtectSysKey.h"
 #include "MUHelper/MuHelper.h"
@@ -485,7 +486,6 @@ int g_iMousePopPosition_y = 0;
 
 extern int TimeRemain;
 extern bool EnableFastInput;
-void MainScene(HDC hDC);
 
 LONG FAR PASCAL WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -562,6 +562,11 @@ LONG FAR PASCAL WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         }
         break;
+    case WM_RECEIVE_BUFFER: {
+        auto Packet = std::unique_ptr<PacketInfo>(reinterpret_cast<PacketInfo*>(wParam));
+        ProcessPacketCallback(Packet.release());
+        break;
+    }
     case WM_USER_MEMORYHACK:
         //SetTimer( g_hWnd, WINDOWMINIMIZED_TIMER, 1*1000, NULL);
         KillGLWindow();
@@ -1098,43 +1103,36 @@ BOOL OpenInitFile()
     return TRUE;
 }
 
-BOOL Util_CheckOption(wchar_t* lpszCommandLine, wchar_t cOption, wchar_t* lpszString)
+BOOL Util_CheckOption(std::wstring lpszCommandLine, wchar_t cOption, std::wstring& lpszString)
 {
-    wchar_t cComp[2];
-    cComp[0] = cOption; cComp[1] = cOption;
-    if (islower((int)cOption))
-    {
-        cComp[1] = toupper((int)cOption);
-    }
-    else if (isupper((int)cOption))
-    {
-        cComp[1] = tolower((int)cOption);
+    if (lpszCommandLine.empty()) {
+        return FALSE;
     }
 
-    const wchar_t nFind = L'/';
-    auto* lpFound = lpszCommandLine;
-    while (lpFound)
+    // Create both lowercase and uppercase variants of the option character
+    std::wstring cOptionLower = L"/";
+    cOptionLower += towlower(static_cast<wint_t>(cOption));
+    auto foundIndex = lpszCommandLine.find(cOptionLower);
+    if (foundIndex == std::wstring::npos)
     {
-        lpFound = wcschr(lpFound + 1, nFind);
-        if (lpFound && (*(lpFound + 1) == cComp[0] || *(lpFound + 1) == cComp[1]))
-        {
-            if (lpszString)
-            {
-                int nCount = 0;
-                for (wchar_t* lpSeek = lpFound + 2; *lpSeek != L' ' && *lpSeek != L'\0'; lpSeek++)
-                {
-                    nCount++;
-                }
-
-                wcscpy_s(lpszString, nCount, lpFound + 2);
-                lpszString[nCount] = L'\0';
-            }
-
-            return (TRUE);
-        }
+        std::wstring cOptionUpper = L"/";
+        cOptionUpper += towupper(static_cast<wint_t>(cOption));
+        foundIndex = lpszCommandLine.find(cOptionUpper);
     }
 
-    return (FALSE);
+    if (foundIndex == std::wstring::npos)
+    {
+        return FALSE;
+    }
+
+    auto endIndex = lpszCommandLine.find(L' ', foundIndex);
+    if (endIndex == std::wstring::npos)
+    {
+        endIndex = lpszCommandLine.length();
+    }
+
+    lpszString = lpszCommandLine.substr(foundIndex + 2, endIndex - foundIndex - 2);
+    return TRUE;
 }
 
 BOOL UpdateFile(wchar_t* lpszOld, wchar_t* lpszNew)
@@ -1205,37 +1203,22 @@ BOOL KillExeProcess(wchar_t* lpszExe)
 wchar_t g_lpszCmdURL[50];
 BOOL GetConnectServerInfo(wchar_t* szCmdLine, wchar_t* lpszURL, WORD* pwPort)
 {
-    wchar_t lpszTemp[256] = { 0, };
-    if (Util_CheckOption(szCmdLine, L'y', lpszTemp))
-    {
-        BYTE bySuffle[] = { 0x0C, 0x07, 0x03, 0x13 };
+    std::wstring lpszTemp = { 0, };
 
-        for (int i = 0; i < (int)wcslen(lpszTemp); i++)
-            lpszTemp[i] -= bySuffle[i % 4];
-        wcscpy(lpszURL, lpszTemp);
-
-        if (Util_CheckOption(szCmdLine, L'z', lpszTemp))
-        {
-            for (int j = 0; j < (int)wcslen(lpszTemp); j++)
-                lpszTemp[j] -= bySuffle[j % 4];
-            *pwPort = _wtoi(lpszTemp);
-        }
-
-        g_ErrorReport.Write(L"[Virtual Connection] Connect IP : %s, Port : %d\r\n", lpszURL, *pwPort);
-        return (TRUE);
-    }
     if (!Util_CheckOption(szCmdLine, L'u', lpszTemp))
     {
-        return (FALSE);
+        return FALSE;
     }
-    wcscpy(lpszURL, lpszTemp);
+
+    wcscpy(lpszURL, lpszTemp.c_str());
     if (!Util_CheckOption(szCmdLine, L'p', lpszTemp))
     {
-        return (FALSE);
+        return FALSE;
     }
-    *pwPort = _wtoi(lpszTemp);
 
-    return (TRUE);
+    *pwPort = static_cast<WORD>(std::stoi(lpszTemp));
+
+    return TRUE;
 }
 
 extern int TimeRemain;
@@ -1255,28 +1238,97 @@ bool ExceptionCallback(_EXCEPTION_POINTERS* pExceptionInfo)
     return true;
 }
 
+double CPU_AVG = 0.0;
+void RecordCpuUsage() 
+{
+    constexpr int max_recordings = 60;
+    double CPU_Recordings[max_recordings] = { 0.0 };
+    double currentAvg = 0.0;
+    double sum = 0.0;
+    int count = 0;
+    int numFilled = 0;
+    auto lastUpdateTime = std::chrono::steady_clock::now();
+
+    while (!Destroy) 
+    {
+        double currentUsage = CpuUsage::Instance()->GetUsage();
+
+        currentUsage = max(0.0, min(100.0, currentUsage));
+
+        // Subtract the old value to maintain the sum
+        sum -= CPU_Recordings[count];
+
+        sum += currentUsage;
+
+        CPU_Recordings[count] = currentUsage;
+
+        // Update the count (wrap around when full - FIFO behavior)
+        count = (count + 1) % max_recordings;
+
+        if (numFilled < max_recordings)
+        {
+            numFilled++;
+        }
+
+        // Calculate the current average
+        currentAvg = sum / numFilled;
+
+        // Update the CPU_AVG every 250 ms
+        auto currentTime = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastUpdateTime).count() >= 250)
+        {
+            CPU_AVG = currentAvg;
+            lastUpdateTime = currentTime;
+        }
+
+        // Sleep to match a 60Hz frame rate as the basis
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    }
+}
+
+// unlimited as default (same behavior as original)
+int g_MaxMessagePerCycle = -1; 
+
+void SetMaxMessagePerCycle(int messages)
+{
+    constexpr int custom_min = 3;
+    g_MaxMessagePerCycle = (messages > 0) ? max(messages, custom_min) : messages;
+}
+
 MSG MainLoop()
 {
     MSG msg;
+
+    constexpr auto target_resolution = 1;
+    auto precise = timeBeginPeriod(target_resolution);
+
     while (1)
     {
-        if (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE))
+        int messageProcessed = 0;
+
+        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
-            if (!GetMessage(&msg, NULL, 0, 0))
+            if (msg.message == WM_QUIT)
             {
-                break;
+                return msg;
             }
 
             TranslateMessage(&msg);
             DispatchMessage(&msg);
+            ++messageProcessed;
+
+            if (g_MaxMessagePerCycle > 0 && messageProcessed >= g_MaxMessagePerCycle)
+            {
+                break;
+            }
         }
-        else
+
+        if (CheckRenderNextFrame())
         {
-            //Scene
 #if (defined WINDOWMODE)
             if (g_bUseWindowMode || g_bWndActive)
             {
-                Scene(g_hDC);
+                RenderScene(g_hDC);
             }
 #ifndef FOR_WORK
             else if (g_bUseWindowMode == FALSE)
@@ -1301,11 +1353,23 @@ MSG MainLoop()
 #endif//FOR_WORK
 #else//WINDOWMODE
             if (g_bWndActive)
-                Scene(g_hDC);
-
+                RenderScene(g_hDC);
 #endif	//WINDOWMODE(#else)
         }
+        else
+        {
+            if (!PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE))
+            {
+                WaitForNextActivity(precise == TIMERR_NOERROR);
+            }
+        }
+
     } // while( 1 )
+
+    if (precise == TIMERR_NOERROR)
+    {
+        timeEndPeriod(target_resolution);
+    }
 
     return msg;
 }
@@ -1590,6 +1654,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLin
 #endif // !FOR_WORK
 #endif // PROTECT_SYSTEMKEY && NDEBUG
 
+    std::thread cpuUsageRecorder(RecordCpuUsage);
     const MSG msg = MainLoop();
 
     DestroyWindow();
