@@ -30,7 +30,7 @@ namespace leaf {
 
         bool ReadString(const std::wstring& name, std::wstring& value) {
             return OpenKey([&](HKEY hKey) {
-                wchar_t buffer[256];
+                wchar_t buffer[256]{ 0 };
                 DWORD type = REG_EXPAND_SZ;
                 DWORD size = sizeof(buffer);
                 if (RegQueryValueEx(hKey, name.c_str(), nullptr, &type, reinterpret_cast<LPBYTE>(buffer), &size) != ERROR_SUCCESS)
