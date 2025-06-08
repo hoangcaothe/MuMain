@@ -1,8 +1,4 @@
-//////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////
-#ifndef __CSITEM_OPTION_H__
-#define __CSITEM_OPTION_H__
-
+#pragma once
 #include "Singleton.h"
 #include <map>
 
@@ -134,7 +130,7 @@ public:
         m_bySelectedItemOption = 0;
         m_bySameSetItem = 0;
     }
-    bool    OpenItemSetScript(bool bTestServer);
+    bool OpenItemSetScript();
 
     static bool    IsDisableSkill(ActionSkillType Type, int Energy, int Charisma = 0);
     BYTE    IsChangeSetItem(const int Type, const int SubType);
@@ -152,7 +148,7 @@ public:
     static bool    GetDefaultOptionText(const ITEM* ip, wchar_t* Text);
     static int     RenderDefaultOptionText(const ITEM* ip, int TextNum);
 
-    static bool    Special_Option_Check(int Kind = 0);
+    static bool    IsNonWeaponSkillOrIsSkillEquipped(ActionSkillType skill);
     void	CheckItemSetOptions(void);
     void	MoveSetOptionList(const int StartX, const int StartY);
     void	RenderSetOptionButton(const int StartX, const int StartY);
@@ -176,6 +172,3 @@ public:
 
 #define g_csItemOption CSItemOption::GetSingleton ()
 
-extern std::wstring g_strSelectedML;
-
-#endif

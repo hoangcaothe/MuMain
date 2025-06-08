@@ -1630,7 +1630,7 @@ void CNewUIMuHelper::RenderSkillIcon(int skill, float x, float y, float width, f
         fV = 3 * height / 256.f;
         iKindofSkill = KOS_SKILL2;
     }
-    else if (skill == AT_SKILL_ALICE_BERSERKER)
+    else if (skill == AT_SKILL_ALICE_BERSERKER || skill == AT_SKILL_ALICE_BERSERKER_STR)
     {
         fU = 10 * width / 256.f;
         fV = 3 * height / 256.f;
@@ -1654,7 +1654,7 @@ void CNewUIMuHelper::RenderSkillIcon(int skill, float x, float y, float width, f
         fV = 3 * height / 256.f;
         iKindofSkill = KOS_SKILL2;
     }
-    else if (skill == AT_SKILL_BLOW_OF_DESTRUCTION)
+    else if (skill == AT_SKILL_STRIKE_OF_DESTRUCTION)
     {
         fU = 7 * width / 256.f;
         fV = 2 * height / 256.f;
@@ -1699,13 +1699,13 @@ void CNewUIMuHelper::RenderSkillIcon(int skill, float x, float y, float width, f
         fV = 3 * height / 256.f;
         iKindofSkill = KOS_SKILL2;
     }
-    else if (AT_SKILL_LIGHTNING_SHOCK_UP <= skill && skill <= AT_SKILL_LIGHTNING_SHOCK_UP + 4)
+    else if (skill == AT_SKILL_LIGHTNING_SHOCK_STR)
     {
         fU = 6 * width / 256.f;
         fV = 8 * height / 256.f;
         iKindofSkill = KOS_SKILL2;
     }
-    else if (skill == AT_SKILL_SWELL_OF_MAGICPOWER)
+    else if (skill == AT_SKILL_EXPANSION_OF_WIZARDRY)
     {
         fU = 8 * width / 256.f;
         fV = 2 * height / 256.f;
@@ -1717,16 +1717,16 @@ void CNewUIMuHelper::RenderSkillIcon(int skill, float x, float y, float width, f
         fV = (height / 256.f) * ((Skill_Icon / 12) + 4);
         iKindofSkill = KOS_SKILL2;
     }
-    else if (skill >= AT_SKILL_THRUST)
+    else if (skill >= AT_SKILL_KILLING_BLOW)
     {
-        fU = ((skill - 260) % 12) * width / 256.f;
-        fV = ((skill - 260) / 12) * height / 256.f;
+        fU = ((skill - AT_SKILL_KILLING_BLOW) % 12) * width / 256.f;
+        fV = ((skill - AT_SKILL_KILLING_BLOW) / 12) * height / 256.f;
         iKindofSkill = KOS_SKILL3;
     }
-    else if (skill >= 57)
+    else if (skill >= AT_SKILL_SPIRAL_SLASH)
     {
-        fU = ((skill - 57) % 8) * width / 256.f;
-        fV = ((skill - 57) / 8) * height / 256.f;
+        fU = ((skill - AT_SKILL_SPIRAL_SLASH) % 8) * width / 256.f;
+        fV = ((skill - AT_SKILL_SPIRAL_SLASH) / 8) * height / 256.f;
         iKindofSkill = KOS_SKILL2;
     }
     else
@@ -1756,7 +1756,11 @@ void CNewUIMuHelper::RenderSkillIcon(int skill, float x, float y, float width, f
     }break;
     }
 
-    if (iTextureIndex != 0)
+    if (skill >= AT_SKILL_MASTER_BEGIN)
+    {
+        RenderImage(BITMAP_INTERFACE_MASTER_BEGIN + 2, x, y, width, height, (20.f / 512.f) * (Skill_Icon % 25), ((28.f / 512.f) * ((Skill_Icon / 25))), 20.f / 512.f, 28.f / 512.f);
+    }
+    else if (iTextureIndex != 0)
     {
         RenderBitmap(iTextureIndex, x, y, width, height, fU, fV, width / 256.f, height / 256.f);
     }
@@ -1918,41 +1922,42 @@ bool CNewUIMuHelperSkillList::Update()
 
 bool CNewUIMuHelperSkillList::Render()
 {
-    float x = 640 - 190 - 32;
-    float y = m_bFilterByAttackSkills ? 171 : 293;
-    float fOrigY = y;
-    float width = 32, height = 38;
-    int iSkillPerRow = m_bFilterByAttackSkills ? 9 : 5;
+    float scale = 1.0f; // 
+    float boxWidth = 32.f * scale;
+    float boxHeight = 38.f * scale;
+    float iconWidth = 20.f * scale;
+    float iconHeight = 28.f * scale;
+    float iconOffsetX = (boxWidth - iconWidth) / 2.f;
+    float iconOffsetY = (boxHeight - iconHeight) / 2.f;
+
+    // top skills Helper basic
+    float startX = 640.f - 190.f - 32.f;
+    float startY = m_bFilterByAttackSkills ? 20.f : 260.f;
+
+    int itemsPerColumn = m_bFilterByAttackSkills ? 10 : 6;
     int iSkillCount = 0;
 
     for (int iSkillType : m_aiSkillsToRender)
     {
-        if (iSkillCount == iSkillPerRow)
-        {
-            x -= width;
-        }
+        int col = iSkillCount / itemsPerColumn;
+        int row = iSkillCount % itemsPerColumn;
 
-        int iRemainder = iSkillCount % 2;
-        int iQuotient = iSkillCount / 2;
+        float x = startX - col * boxWidth;
+        float y = startY + row * boxHeight;
 
-        if (iRemainder == 0)
-        {
-            y = fOrigY + iQuotient * height;
-        }
-        else
-        {
-            y = fOrigY - (iQuotient + 1) * height;
-        }
+        RenderImage(IMAGE_SKILLBOX, x, y, boxWidth, boxHeight);
+        RenderSkillIcon(iSkillType, x + iconOffsetX, y + iconOffsetY, iconWidth, iconHeight);
 
-        RenderImage(IMAGE_SKILLBOX, x, y, width, height);
-        RenderSkillIcon(iSkillType, x + 6, y + 6, 20, 28);
-
-        m_skillIconMap.insert_or_assign(iSkillType, cSkillIcon{ iSkillType, { static_cast<LONG>(x), static_cast<LONG>(y) }, { static_cast<LONG>(width), static_cast<LONG>(height) } });
+        m_skillIconMap.insert_or_assign(iSkillType, cSkillIcon{
+            iSkillType,
+            { static_cast<LONG>(x), static_cast<LONG>(y) },
+            { static_cast<LONG>(boxWidth), static_cast<LONG>(boxHeight) }
+            });
 
         iSkillCount++;
     }
 
-    if (m_bRenderSkillInfo == true && m_pNewUI3DRenderMng)
+    if (m_bRenderSkillInfo && m_pNewUI3DRenderMng)
     {
         m_pNewUI3DRenderMng->RenderUI2DEffect(INVENTORY_CAMERA_Z_ORDER, UI2DEffectCallback, this, 0, 0);
         m_bRenderSkillInfo = false;
@@ -2003,6 +2008,12 @@ void CNewUIMuHelperSkillList::RenderSkillIcon(int iSkillType, float x, float y, 
         fV = 3 * height / 256.f;
         iKindofSkill = KOS_SKILL2;
     }
+    else if (iSkillType == AT_SKILL_ALICE_SLEEP_STR)
+    {
+        fU = (4 % 8) * width / 256.f;
+        fV = 3 * height / 256.f;
+        iKindofSkill = KOS_SKILL2;
+    }
     else if (iSkillType == AT_SKILL_ALICE_BERSERKER)
     {
         fU = 10 * width / 256.f;
@@ -2027,7 +2038,7 @@ void CNewUIMuHelperSkillList::RenderSkillIcon(int iSkillType, float x, float y, 
         fV = 3 * height / 256.f;
         iKindofSkill = KOS_SKILL2;
     }
-    else if (iSkillType == AT_SKILL_BLOW_OF_DESTRUCTION)
+    else if (iSkillType == AT_SKILL_STRIKE_OF_DESTRUCTION)
     {
         fU = 7 * width / 256.f;
         fV = 2 * height / 256.f;
@@ -2072,13 +2083,7 @@ void CNewUIMuHelperSkillList::RenderSkillIcon(int iSkillType, float x, float y, 
         fV = 3 * height / 256.f;
         iKindofSkill = KOS_SKILL2;
     }
-    else if (AT_SKILL_LIGHTNING_SHOCK_UP <= iSkillType && iSkillType <= AT_SKILL_LIGHTNING_SHOCK_UP + 4)
-    {
-        fU = 6 * width / 256.f;
-        fV = 8 * height / 256.f;
-        iKindofSkill = KOS_SKILL2;
-    }
-    else if (iSkillType == AT_SKILL_SWELL_OF_MAGICPOWER)
+    else if (iSkillType == AT_SKILL_EXPANSION_OF_WIZARDRY)
     {
         fU = 8 * width / 256.f;
         fV = 2 * height / 256.f;
@@ -2090,16 +2095,16 @@ void CNewUIMuHelperSkillList::RenderSkillIcon(int iSkillType, float x, float y, 
         fV = (height / 256.f) * ((Skill_Icon / 12) + 4);
         iKindofSkill = KOS_SKILL2;
     }
-    else if (iSkillType >= AT_SKILL_THRUST)
+    else if (iSkillType >= AT_SKILL_KILLING_BLOW)
     {
-        fU = ((iSkillType - 260) % 12) * width / 256.f;
-        fV = ((iSkillType - 260) / 12) * height / 256.f;
+        fU = ((iSkillType - AT_SKILL_KILLING_BLOW) % 12) * width / 256.f;
+        fV = ((iSkillType - AT_SKILL_KILLING_BLOW) / 12) * height / 256.f;
         iKindofSkill = KOS_SKILL3;
     }
-    else if (iSkillType >= 57)
+    else if (iSkillType >= AT_SKILL_SPIRAL_SLASH)
     {
-        fU = ((iSkillType - 57) % 8) * width / 256.f;
-        fV = ((iSkillType - 57) / 8) * height / 256.f;
+        fU = ((iSkillType - AT_SKILL_SPIRAL_SLASH) % 8) * width / 256.f;
+        fV = ((iSkillType - AT_SKILL_SPIRAL_SLASH) / 8) * height / 256.f;
         iKindofSkill = KOS_SKILL2;
     }
     else
@@ -2129,7 +2134,11 @@ void CNewUIMuHelperSkillList::RenderSkillIcon(int iSkillType, float x, float y, 
     }break;
     }
 
-    if (iTextureId != 0)
+    if (iSkillType >= AT_SKILL_MASTER_BEGIN)
+    {
+        RenderImage(BITMAP_INTERFACE_MASTER_BEGIN + 2, x, y, width, height, (20.f / 512.f) * (Skill_Icon % 25), ((28.f / 512.f) * ((Skill_Icon / 25))), 20.f / 512.f, 28.f / 512.f);
+    }
+    else if (iTextureId != 0)
     {
         RenderBitmap(iTextureId, x, y, width, height, fU, fV, width / 256.f, height / 256.f);
     }
@@ -2162,43 +2171,46 @@ bool CNewUIMuHelperSkillList::IsBuffSkill(int iSkillType)
     switch (iSkillType)
     {
     // BK buffs
-    case AT_SKILL_LIFE_UP:
-    case AT_SKILL_LIFE_UP + 1:
-    case AT_SKILL_LIFE_UP + 2:
-    case AT_SKILL_LIFE_UP + 3:
-    case AT_SKILL_LIFE_UP + 4:
-    case AT_SKILL_VITALITY:
+    case AT_SKILL_SWELL_LIFE:
+    case AT_SKILL_SWELL_LIFE_STR:
+    case AT_SKILL_SWELL_LIFE_PROFICIENCY:
         return true;
     // Elf buffs
     case AT_SKILL_INFINITY_ARROW:
-    case AT_SKILL_DEF_POWER_UP:
-    case AT_SKILL_DEF_POWER_UP + 1:
-    case AT_SKILL_DEF_POWER_UP + 2:
-    case AT_SKILL_DEF_POWER_UP + 3:
-    case AT_SKILL_DEF_POWER_UP + 4:
+    case AT_SKILL_INFINITY_ARROW_STR:
     case AT_SKILL_DEFENSE:
-    case AT_SKILL_ATT_POWER_UP:
-    case AT_SKILL_ATT_POWER_UP + 1:
-    case AT_SKILL_ATT_POWER_UP + 2:
-    case AT_SKILL_ATT_POWER_UP + 3:
-    case AT_SKILL_ATT_POWER_UP + 4:
+    case AT_SKILL_DEFENSE_STR:
+    case AT_SKILL_DEFENSE_MASTERY:
     case AT_SKILL_ATTACK:
+    case AT_SKILL_ATTACK_STR:
+    case AT_SKILL_ATTACK_MASTERY:
         return true;
     // Wiz buffs
-    case AT_SKILL_WIZARDDEFENSE:
-    case AT_SKILL_SOUL_UP:
-    case AT_SKILL_SOUL_UP + 1:
-    case AT_SKILL_SOUL_UP + 2:
-    case AT_SKILL_SOUL_UP + 3:
-    case AT_SKILL_SOUL_UP + 4:
-    case AT_SKILL_SWELL_OF_MAGICPOWER:
+    case AT_SKILL_SOUL_BARRIER:
+    case AT_SKILL_SOUL_BARRIER_STR:
+    case AT_SKILL_SOUL_BARRIER_PROFICIENCY:
+    case AT_SKILL_EXPANSION_OF_WIZARDRY:
+    case AT_SKILL_EXPANSION_OF_WIZARDRY_STR:
+    case AT_SKILL_EXPANSION_OF_WIZARDRY_MASTERY:
         return true;
     // DL buffs
     case AT_SKILL_ADD_CRITICAL:
+    case AT_SKILL_ADD_CRITICAL_STR1:
+    case AT_SKILL_ADD_CRITICAL_STR2:
+    case AT_SKILL_ADD_CRITICAL_STR3:
         return true;
     // Summoner buffs
     case AT_SKILL_ALICE_BERSERKER:
+    case AT_SKILL_ALICE_BERSERKER_STR:
     case AT_SKILL_ALICE_THORNS:
+        return true;
+        // RF Buffs
+    case AT_SKILL_ATT_UP_OURFORCES:
+    case AT_SKILL_HP_UP_OURFORCES:
+    case AT_SKILL_DEF_UP_OURFORCES:
+    case AT_SKILL_HP_UP_OURFORCES_STR:
+    case AT_SKILL_DEF_UP_OURFORCES_MASTERY:
+    case AT_SKILL_DEF_UP_OURFORCES_STR:
         return true;
     }
 
@@ -2211,19 +2223,11 @@ bool CNewUIMuHelperSkillList::IsHealingSkill(int iSkillType)
 
     switch (iSkillType)
     {
-    case AT_SKILL_HEAL_UP:
-    case AT_SKILL_HEAL_UP + 1:
-    case AT_SKILL_HEAL_UP + 2:
-    case AT_SKILL_HEAL_UP + 3:
-    case AT_SKILL_HEAL_UP + 4:
     case AT_SKILL_HEALING:
+    case AT_SKILL_HEALING_STR:
         return true;
-    case AT_SKILL_ALICE_DRAINLIFE_UP:
-    case AT_SKILL_ALICE_DRAINLIFE_UP + 1:
-    case AT_SKILL_ALICE_DRAINLIFE_UP + 2:
-    case AT_SKILL_ALICE_DRAINLIFE_UP + 3:
-    case AT_SKILL_ALICE_DRAINLIFE_UP + 4:
     case AT_SKILL_ALICE_DRAINLIFE:
+    case AT_SKILL_ALICE_DRAINLIFE_STR:
         return true;
     }
 
@@ -2235,6 +2239,7 @@ bool CNewUIMuHelperSkillList::IsDefenseSkill(int iSkillType)
     switch (iSkillType)
     {
     case AT_SKILL_DEFENSE:
+    case AT_SKILL_DEFENSE_STR:
         return true;
     }
 

@@ -4,7 +4,7 @@
 
 #include "PersonalShopTitleImp.h"
 #include "MapManager.h"
-#include "./Utilities/Log/muConsoleDebug.h"
+
 
 using namespace SEASON3B;
 
@@ -394,7 +394,7 @@ bool CNewUISystem::LoadMainSceneInterface()
         return false;
 
     m_pNewMaster_Level_Interface = new CNewUIMasterLevel;
-    if (m_pNewMaster_Level_Interface->Create(m_pNewUIMng, 0, 0) == false)
+    if (m_pNewMaster_Level_Interface->Create(m_pNewUIMng) == false)
         return false;
 
     m_pNewMiniMap = new CNewUIMiniMap;

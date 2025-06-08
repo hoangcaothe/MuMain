@@ -379,6 +379,23 @@ typedef struct
     BYTE		 InventoryExtensions;
 } PRECEIVE_JOIN_MAP_SERVER_EXTENDED, * LPPRECEIVE_JOIN_MAP_SERVER_EXTENDED;
 
+typedef struct
+{
+    PBMSG_HEADER Header;
+    BYTE         SubCode;
+    BYTE         PositionX;
+    BYTE         PositionY;
+    BYTE         Map;
+    BYTE         Angle;
+    DWORD       Life;
+    DWORD       Mana;
+    DWORD       Shield;
+    DWORD       SkillMana;
+    uint64_t    CurrentExperience;
+
+    DWORD        Gold;
+} PRECEIVE_REVIVAL_EXTENDED, * LPPRECEIVE_REVIVAL_EXTENDED;
+
 //inventory
 typedef struct {
     BYTE          Index;
@@ -490,7 +507,6 @@ typedef struct {
     BYTE         Flags;
     BYTE         Equipment[EQUIPMENT_LENGTH_EXTENDED];
     BYTE         s_BuffCount;
-    // BYTE		 s_BuffEffectState[MAX_BUFF_SLOT_INDEX];
 } PCREATE_CHARACTER_EXTENDED, * LPPCREATE_CHARACTER_EXTENDED;
 
 //receive other map character
@@ -748,6 +764,21 @@ typedef	struct {
     BYTE		  m_byType;
     BYTE		  m_byCount;
 } PRECEIVE_EX_SKILL_COUNT, * LPPRECEIVE_EX_SKILL_COUNT;
+
+struct PMSG_MASTER_SKILL_LIST_SEND
+{
+    PWMSG_HEADER header; // C2:F3:E2
+    BYTE subcode;
+    DWORD count;
+};
+
+struct PMSG_MASTER_SKILL_LIST
+{
+    BYTE SkillIndex; // Index in skill tree
+    BYTE SkillLevel;
+    float MainValue;
+    float NextValue;
+};
 
 //receive gold
 typedef struct {
@@ -2884,14 +2915,18 @@ typedef struct
     DWORD		wMaxBP;
 } PMSG_MASTERLEVEL_UP_EXTENDED, * LPPMSG_MASTERLEVEL_UP_EXTENDED;
 
+
 typedef struct
 {
     PBMSG_HEADER	h;
     BYTE		subcode;
-    BYTE		btResult;
-    short       nMLPoint;
-    int			nSkillNum;
-    int			nSkillLevel;
+    short		Result;
+    short       MasterLevelUpPoints;
+    int			SkillIndex;
+    int			SkillNumber;
+    int			SkillLevel;
+    float   DisplayValue;
+    float   DisplayValueOfNextLevel;
 } PMSG_ANS_MASTERLEVEL_SKILL, * LPPMSG_ANS_MASTERLEVEL_SKILL;
 
 //----------------------------------------------------------------------------
@@ -3505,7 +3540,6 @@ typedef struct {
 // ?????????????????????????????????????
 //////////////////////////////////////////////////////////////////////////
 extern Connection* SocketClient;
-extern bool EnableSocket;
 extern int HeroKey;
 
 extern int SummonLife;
@@ -3523,21 +3557,9 @@ extern int  SoccerTime;
 extern wchar_t SoccerTeamName[2][8 + 1];
 extern bool SoccerObserver;
 
-#ifdef ACC_PACKETSIZE
-extern int g_iTotalPacketRecv;
-extern int g_iTotalPacketSend;
-extern DWORD g_dwPacketInitialTick;
-#endif //ACC_PACKETSIZE
-
-void BuxConvert(BYTE* Buffer, int Size);
-
 BOOL CreateSocket(wchar_t* IpAddr, unsigned short Port);
 void DeleteSocket();
-//void ProtocolCompiler( CWsctlc *pSocketClient = &SocketClient, int iTranslation = 0, int iParam = 0);
-void ReceiveCharacterList(const BYTE* ReceiveBuffer);
 void ReceiveMovePosition(const BYTE* ReceiveBuffer);
-void ReceiveMoveCharacter(const BYTE* ReceiveBuffer);
-//BOOL TranslateProtocol(int HeadCode,BYTE* ReceiveBuffer,int Size,BOOL bEncrypted);
 
 struct PacketInfo
 {

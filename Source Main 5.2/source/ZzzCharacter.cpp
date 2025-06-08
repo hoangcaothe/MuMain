@@ -30,29 +30,17 @@
 #include "CSItemOption.h"
 #include "CSChaosCastle.h"
 #include "GIPetManager.h"
-#include "GMHellas.h"
 #include "CSParts.h"
-#include "GMBattleCastle.h"
-#include "GMHuntingGround.h"
-#include "GMCryingWolf2nd.h"
 #include "BoneManager.h"
-#include "GMAida.h"
-#include "GMCryWolf1st.h"
-#include "GM_Kanturu_1st.h"
-#include "GM_Kanturu_2nd.h"
 #include "CDirection.h"
-#include "GM_Kanturu_3rd.h"
-#include "GM3rdChangeUp.h"
 #include "Input.h"
 #include "ChangeRingManager.h"
 #include "Event.h"
 #include "PartyManager.h"
-#include "GMNewTown.h"
 #include "w_CursedTemple.h"
 #include "SummonSystem.h"
 #include "CharacterManager.h"
 #include "SkillManager.h"
-#include "GMSwampOfQuiet.h"
 #include "w_MapHeaders.h"
 #include "w_PetProcess.h"
 #include "DuelMgr.h"
@@ -738,11 +726,106 @@ void SetPlayerWalk(CHARACTER* c)
 extern int CurrentSkill;
 int AttackHand = 0;
 
+#define RGZ_FIX_ATTACK_SPEED
+
 void SetAttackSpeed()
 {
+#ifndef RGZ_FIX_ATTACK_SPEED
     float AttackSpeed1 = CharacterAttribute->AttackSpeed * 0.004f;
     float MagicSpeed1 = CharacterAttribute->MagicSpeed * 0.004f;
     float MagicSpeed2 = CharacterAttribute->MagicSpeed * 0.002f;
+#else
+    float AttackSpeed1 = CharacterAttribute->AttackSpeed;
+    float MagicSpeed1 = CharacterAttribute->MagicSpeed;
+    float MagicSpeed2 = CharacterAttribute->MagicSpeed;
+
+    if (CharacterAttribute->AttackSpeed >= 509 && CharacterAttribute->AttackSpeed <= 549)
+    {
+        AttackSpeed1 = AttackSpeed1 * 0.0026000f;
+    }
+    else if (CharacterAttribute->AttackSpeed >= 550 && CharacterAttribute->AttackSpeed <= 750)
+    {
+        AttackSpeed1 = AttackSpeed1 * 0.0017000f;
+    }
+    else
+    {
+        AttackSpeed1 = AttackSpeed1 * 0.0040000f;
+    }
+
+    if (CharacterAttribute->MagicSpeed >= 509 && CharacterAttribute->MagicSpeed <= 549)
+    {
+        MagicSpeed1 = MagicSpeed1 * 0.0026000f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 550 && CharacterAttribute->MagicSpeed <= 750)
+    {
+        MagicSpeed1 = MagicSpeed1 * 0.0017000f;
+    }
+    else
+    {
+        MagicSpeed1 = MagicSpeed1 * 0.0040000f;
+    }
+
+    if (CharacterAttribute->MagicSpeed >= 455 && CharacterAttribute->MagicSpeed <= 479)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0024700f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 605 && CharacterAttribute->MagicSpeed <= 636)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0019000f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 637 && CharacterAttribute->MagicSpeed <= 668)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0018000f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 669 && CharacterAttribute->MagicSpeed <= 688)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0017000f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 855 && CharacterAttribute->MagicSpeed <= 1040)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0016300f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 1041 && CharacterAttribute->MagicSpeed <= 1104)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0015500f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 1301 && CharacterAttribute->MagicSpeed <= 1500)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0017500f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 1501 && CharacterAttribute->MagicSpeed <= 1524)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0015000f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 1525 && CharacterAttribute->MagicSpeed <= 1800)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0014500f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 1801 && CharacterAttribute->MagicSpeed <= 1999)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0013000f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 2000 && CharacterAttribute->MagicSpeed <= 2167)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0012500f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 2168 && CharacterAttribute->MagicSpeed <= 2354)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0011500f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 2855 && CharacterAttribute->MagicSpeed <= 3011)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0009000f;
+    }
+    else if (CharacterAttribute->MagicSpeed >= 3011)
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0008100f;
+    }
+    else
+    {
+        MagicSpeed2 = MagicSpeed2 * 0.0020000f;
+    }
+#endif
 
     Models[MODEL_PLAYER].Actions[PLAYER_ATTACK_FIST].PlaySpeed = 0.6f + AttackSpeed1;
 
@@ -1111,11 +1194,7 @@ void SetPlayerAttack(CHARACTER* c)
             }
         }
     }
-#ifdef PJH_NEW_SERVER_SELECT_MAP
     if (gMapManager.WorldActive == WD_73NEW_LOGIN_SCENE);
-#else //PJH_NEW_SERVER_SELECT_MAP
-    if (World == WD_77NEW_LOGIN_SCENE);
-#endif //PJH_NEW_SERVER_SELECT_MAP
     else
         if (c->Object.AnimationFrame == 0.f)
         {
@@ -2087,7 +2166,7 @@ void AttackEffect(CHARACTER* c)
                 break;
             }
         }
-        else if ((c->Skill) == AT_SKILL_THUNDER)
+        else if ((c->Skill) == AT_SKILL_LIGHTNING || c->Skill == AT_SKILL_LIGHTNING_STR || c->Skill == AT_SKILL_LIGHTNING_STR_MG)
         {
             switch (c->MonsterIndex)
             {
@@ -2431,12 +2510,8 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
     g_iLimitAttackTime = 15;
     switch (iSkill)
     {
-    case AT_SKILL_BLOW_UP:
-    case AT_SKILL_BLOW_UP + 1:
-    case AT_SKILL_BLOW_UP + 2:
-    case AT_SKILL_BLOW_UP + 3:
-    case AT_SKILL_BLOW_UP + 4:
     case AT_SKILL_DEATHSTAB:
+    case AT_SKILL_DEATHSTAB_STR:
     {
         BMD* b = &Models[o->Type];
 
@@ -2454,7 +2529,7 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
         }
 
         if (2 <= c->AttackTime && c->AttackTime <= 8 && rand_fps_check(1))
-        {	// 기 모으기
+        {
             for (int j = 0; j < 3; ++j)
             {
                 vec3_t CurPos;
@@ -2519,7 +2594,7 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
         }
     }
     break;
-    case AT_SKILL_SPEAR:	// 창찌르기
+    case AT_SKILL_IMPALE:	// 창찌르기
     {
         BMD* b = &Models[o->Type];
 
@@ -2579,7 +2654,8 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
     }
     break;
 
-    case    AT_SKILL_PIERCING:
+    case    AT_SKILL_PENETRATION:
+    case AT_SKILL_PENETRATION_STR:
         if (o->Type == MODEL_PLAYER && o->CurrentAction >= PLAYER_ATTACK_FIST && o->CurrentAction <= PLAYER_RIDE_SKILL)
         {
             if (o->AnimationFrame >= 5.f)
@@ -2598,12 +2674,8 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
         g_iLimitAttackTime = 5;
         break;
 
-    case AT_SKILL_BLOOD_ATT_UP:
-    case AT_SKILL_BLOOD_ATT_UP + 1:
-    case AT_SKILL_BLOOD_ATT_UP + 2:
-    case AT_SKILL_BLOOD_ATT_UP + 3:
-    case AT_SKILL_BLOOD_ATT_UP + 4:
-    case AT_SKILL_REDUCEDEFENSE:
+    case AT_SKILL_FIRE_SLASH:
+    case AT_SKILL_FIRE_SLASH_STR:
         if (o->Type == MODEL_PLAYER)
         {
             SetAction(o, PLAYER_ATTACK_SKILL_WHEEL);
@@ -2622,7 +2694,7 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
 
                 PlayBuffer(SOUND_SKILL_SWORD3);
 
-                if (iSkill == AT_SKILL_BLOOD_ATT_UP + 4)
+                if (iSkill == AT_SKILL_FIRE_SLASH_STR)
                 {
                     CreateEffect(BITMAP_SWORD_FORCE, o->Position, o->Angle, o->Light, 1, o, o->PKKey, FindHotKey(iSkill));
                 }
@@ -2639,12 +2711,8 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
         g_iLimitAttackTime = 15;
         break;
 
-    case AT_SKILL_POWER_SLASH_UP:
-    case AT_SKILL_POWER_SLASH_UP + 1:
-    case AT_SKILL_POWER_SLASH_UP + 2:
-    case AT_SKILL_POWER_SLASH_UP + 3:
-    case AT_SKILL_POWER_SLASH_UP + 4:
-    case AT_SKILL_ICE_BLADE:
+    case AT_SKILL_POWER_SLASH:
+    case AT_SKILL_POWER_SLASH_STR:
         if (o->Type == MODEL_PLAYER && o->CurrentAction == PLAYER_ATTACK_TWO_HAND_SWORD_TWO && rand_fps_check(1))
         {
             vec3_t Angle;
@@ -2669,18 +2737,15 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
         g_iLimitAttackTime = 15;
         break;
 
-    case AT_SKILL_BLAST_HELL:
+    case AT_SKILL_NOVA:
         if (o->AnimationFrame >= 14.f && o->Type == MODEL_PLAYER && o->CurrentAction == PLAYER_SKILL_HELL_START)
         {
             c->AttackTime = 15;
         }
         break;
-    case AT_SKILL_LIFE_UP:
-    case AT_SKILL_LIFE_UP + 1:
-    case AT_SKILL_LIFE_UP + 2:
-    case AT_SKILL_LIFE_UP + 3:
-    case AT_SKILL_LIFE_UP + 4:
-    case    AT_SKILL_VITALITY:
+    case AT_SKILL_SWELL_LIFE:
+    case AT_SKILL_SWELL_LIFE_STR:
+    case AT_SKILL_SWELL_LIFE_PROFICIENCY:
         if ((int)c->AttackTime > 9 && o->Type == MODEL_PLAYER && o->CurrentAction == PLAYER_SKILL_VITALITY)
         {
             c->AttackTime = 15;
@@ -2693,7 +2758,9 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
             c->AttackTime = 15;
         }
         break;
-    case AT_SKILL_STRONG_PIER:
+    case AT_SKILL_FORCE:
+    case AT_SKILL_FORCE_WAVE:
+    case AT_SKILL_FORCE_WAVE_STR:
         if (o->AnimationFrame >= 3.f && o->Type == MODEL_PLAYER && (o->CurrentAction == PLAYER_ATTACK_STRIKE || o->CurrentAction == PLAYER_ATTACK_RIDE_STRIKE
             || o->CurrentAction == PLAYER_FENRIR_ATTACK_DARKLORD_STRIKE
             ))
@@ -2701,12 +2768,9 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
             c->AttackTime = 15;
         }
         break;
-    case AT_SKILL_FIRE_BUST_UP:
-    case AT_SKILL_FIRE_BUST_UP + 1:
-    case AT_SKILL_FIRE_BUST_UP + 2:
-    case AT_SKILL_FIRE_BUST_UP + 3:
-    case AT_SKILL_FIRE_BUST_UP + 4:
-    case    AT_SKILL_LONGPIER_ATTACK:
+    case AT_SKILL_FIREBURST:
+    case AT_SKILL_FIREBURST_STR:
+    case AT_SKILL_FIREBURST_MASTERY:
         if (o->AnimationFrame >= 3.f && o->Type == MODEL_PLAYER && (o->CurrentAction == PLAYER_ATTACK_STRIKE || o->CurrentAction == PLAYER_ATTACK_RIDE_STRIKE
             || o->CurrentAction == PLAYER_FENRIR_ATTACK_DARKLORD_STRIKE))
         {
@@ -2724,12 +2788,9 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
             c->AttackTime = 10;
         }
         break;
-    case AT_SKILL_ASHAKE_UP:
-    case AT_SKILL_ASHAKE_UP + 1:
-    case AT_SKILL_ASHAKE_UP + 2:
-    case AT_SKILL_ASHAKE_UP + 3:
-    case AT_SKILL_ASHAKE_UP + 4:
-    case    AT_SKILL_DARK_HORSE:
+    case    AT_SKILL_EARTHSHAKE:
+    case    AT_SKILL_EARTHSHAKE_STR:
+    case    AT_SKILL_EARTHSHAKE_MASTERY:
         if (o->AnimationFrame >= 5.f && o->Type == MODEL_PLAYER && o->CurrentAction == PLAYER_ATTACK_DARKHORSE)
         {
             c->AttackTime = 15;
@@ -2792,7 +2853,7 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
             }
         }
         break;
-    case    AT_SKILL_ONEFLASH:
+    case    AT_SKILL_SPIRAL_SLASH:
         if (o->AnimationFrame > 5.f && rand_fps_check(1))
         {
             CreateJoint(BITMAP_FLARE, o->Position, o->Position, o->Angle, 23, NULL, 40.f, 0);
@@ -2839,25 +2900,25 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
             c->AttackTime = 15;
         }
         break;
-    case AT_SKILL_LIGHTNING_SHOCK_UP:
-    case AT_SKILL_LIGHTNING_SHOCK_UP + 1:
-    case AT_SKILL_LIGHTNING_SHOCK_UP + 2:
-    case AT_SKILL_LIGHTNING_SHOCK_UP + 3:
-    case AT_SKILL_LIGHTNING_SHOCK_UP + 4:
 
+    case AT_SKILL_LIGHTNING_SHOCK_STR:
     case AT_SKILL_LIGHTNING_SHOCK:
     {
         c->AttackTime = 15;
     }
     break;
-    case AT_SKILL_BLOW_OF_DESTRUCTION:
+    case AT_SKILL_STRIKE_OF_DESTRUCTION:
+    case AT_SKILL_STRIKE_OF_DESTRUCTION_STR:
     {
         c->AttackTime = 15;
     }
     break;
     case AT_SKILL_ATT_UP_OURFORCES:
     case AT_SKILL_HP_UP_OURFORCES:
+    case AT_SKILL_HP_UP_OURFORCES_STR:
     case AT_SKILL_DEF_UP_OURFORCES:
+    case AT_SKILL_DEF_UP_OURFORCES_STR:
+    case AT_SKILL_DEF_UP_OURFORCES_MASTERY:
     {
         c->AttackTime = 15;
     }
@@ -2867,8 +2928,11 @@ bool AttackStage(CHARACTER* c, OBJECT* o)
         c->AttackTime = 1;
     }
     break;
-    case AT_SKILL_GIANTSWING:
-    case AT_SKILL_STAMP:
+    case AT_SKILL_CHAIN_DRIVE:
+    case AT_SKILL_CHAIN_DRIVE_STR:
+    case AT_SKILL_BEAST_UPPERCUT:
+    case AT_SKILL_BEAST_UPPERCUT_STR:
+    case AT_SKILL_BEAST_UPPERCUT_MASTERY:
     {
         o->m_sTargetIndex = c->TargetCharacter;
     }
@@ -3105,7 +3169,7 @@ void DeadCharacter(CHARACTER* c, OBJECT* o, BMD* b)
     {
         switch (c->m_byDieType)
         {
-        case AT_SKILL_BLAST_HELL:
+        case AT_SKILL_NOVA:
         case AT_SKILL_COMBO:
             if (c->Dead < 15)
             {
@@ -3120,7 +3184,7 @@ void DeadCharacter(CHARACTER* c, OBJECT* o, BMD* b)
                 MoveParticle(o, o->HeadAngle);
             }
 
-            if (c->Dead <= 30 && c->m_byDieType == AT_SKILL_BLAST_HELL && rand_fps_check(1))
+            if (c->Dead <= 30 && c->m_byDieType == AT_SKILL_NOVA && rand_fps_check(1))
             {
                 vec3_t Light, p, Position;
                 Vector(0.3f, 0.3f, 1.f, Light);
@@ -3976,12 +4040,9 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
 #endif// ADD_ELF_SUMMON
             CreateEffect(BITMAP_MAGIC + 1, o->Position, o->Angle, o->Light, 3, o);
             break;
-        case AT_SKILL_ANGER_SWORD_UP:
-        case AT_SKILL_ANGER_SWORD_UP + 1:
-        case AT_SKILL_ANGER_SWORD_UP + 2:
-        case AT_SKILL_ANGER_SWORD_UP + 3:
-        case AT_SKILL_ANGER_SWORD_UP + 4:
-        case AT_SKILL_FURY_STRIKE:
+        case AT_SKILL_RAGEFUL_BLOW:
+        case AT_SKILL_RAGEFUL_BLOW_STR:
+        case AT_SKILL_RAGEFUL_BLOW_MASTERY:
         {
             o->Weapon = c->Weapon[0].Type - MODEL_SWORD;
             o->WeaponLevel = (BYTE)c->Weapon[0].Level;
@@ -3989,7 +4050,8 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             PlayBuffer(SOUND_FURY_STRIKE1);
             break;
         }
-        case AT_SKILL_BLOW_OF_DESTRUCTION:
+        case AT_SKILL_STRIKE_OF_DESTRUCTION:
+        case AT_SKILL_STRIKE_OF_DESTRUCTION_STR:
             o->Weapon = c->Weapon[0].Type - MODEL_SWORD;
             o->WeaponLevel = (BYTE)c->Weapon[0].Level;
             Vector(0.f, 0.f, 0.f, o->Light);
@@ -3999,30 +4061,19 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             CreateEffect(MODEL_BLOW_OF_DESTRUCTION, o->Position, o->Angle, o->Light, 0, o);
             PlayBuffer(SOUND_SKILL_BLOWOFDESTRUCTION);
             break;
-        case AT_SKILL_BLOOD_ATT_UP:
-        case AT_SKILL_BLOOD_ATT_UP + 1:
-        case AT_SKILL_BLOOD_ATT_UP + 2:
-        case AT_SKILL_BLOOD_ATT_UP + 3:
-        case AT_SKILL_BLOOD_ATT_UP + 4:
-        case AT_SKILL_REDUCEDEFENSE:
+        case AT_SKILL_FIRE_SLASH:
+        case AT_SKILL_FIRE_SLASH_STR:
             o->Weapon = c->Weapon[0].Type - MODEL_SWORD;
             o->WeaponLevel = (BYTE)c->Weapon[0].Level;
             break;
-        case AT_SKILL_POWER_SLASH_UP:
-        case AT_SKILL_POWER_SLASH_UP + 1:
-        case AT_SKILL_POWER_SLASH_UP + 2:
-        case AT_SKILL_POWER_SLASH_UP + 3:
-        case AT_SKILL_POWER_SLASH_UP + 4:
-        case AT_SKILL_ICE_BLADE:
+        case AT_SKILL_POWER_SLASH:
+        case AT_SKILL_POWER_SLASH_STR:
             o->Weapon = c->Weapon[0].Type - MODEL_SWORD;
             o->WeaponLevel = (BYTE)c->Weapon[0].Level;
             break;
-        case AT_SKILL_LIFE_UP:
-        case AT_SKILL_LIFE_UP + 1:
-        case AT_SKILL_LIFE_UP + 2:
-        case AT_SKILL_LIFE_UP + 3:
-        case AT_SKILL_LIFE_UP + 4:
-        case AT_SKILL_VITALITY:
+        case AT_SKILL_SWELL_LIFE:
+        case AT_SKILL_SWELL_LIFE_STR:
+        case AT_SKILL_SWELL_LIFE_PROFICIENCY:
         {
             vec3_t Angle = { 0.0f, 0.0f, 0.0f };
             int iCount = 36;
@@ -4197,6 +4248,9 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
         PlayBuffer(SOUND_SWELLLIFE);
         break;
         case AT_SKILL_ADD_CRITICAL:
+        case AT_SKILL_ADD_CRITICAL_STR1:
+        case AT_SKILL_ADD_CRITICAL_STR2:
+        case AT_SKILL_ADD_CRITICAL_STR3:
             Vector(0.f, 0.f, 0.f, p);
             Vector(1.f, 0.6f, 0.3f, Light);
             if (c->Weapon[0].Type != MODEL_ARROWS)
@@ -4237,18 +4291,10 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
 
             PlayBuffer(SOUND_SKILL_SWORD3);
             break;
-        case AT_SKILL_TORNADO_SWORDA_UP:
-        case AT_SKILL_TORNADO_SWORDA_UP + 1:
-        case AT_SKILL_TORNADO_SWORDA_UP + 2:
-        case AT_SKILL_TORNADO_SWORDA_UP + 3:
-        case AT_SKILL_TORNADO_SWORDA_UP + 4:
-
-        case AT_SKILL_TORNADO_SWORDB_UP:
-        case AT_SKILL_TORNADO_SWORDB_UP + 1:
-        case AT_SKILL_TORNADO_SWORDB_UP + 2:
-        case AT_SKILL_TORNADO_SWORDB_UP + 3:
-        case AT_SKILL_TORNADO_SWORDB_UP + 4:
-        case AT_SKILL_WHEEL:
+        case AT_SKILL_TWISTING_SLASH:
+        case AT_SKILL_TWISTING_SLASH_STR:
+        case AT_SKILL_TWISTING_SLASH_STR_MG:
+        case AT_SKILL_TWISTING_SLASH_MASTERY:
             o->Weapon = c->Weapon[0].Type - MODEL_SWORD;
             o->WeaponLevel = (BYTE)c->Weapon[0].Level;
             CreateEffect(MODEL_SKILL_WHEEL1, o->Position, o->Angle, o->Light, 0, o, o->PKKey, FindHotKey((c->Skill)));
@@ -4258,12 +4304,8 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
 
             c->PostMoveProcess_Active(g_iLimitAttackTime);
             break;
-        case AT_SKILL_HELL_FIRE_UP:
-        case AT_SKILL_HELL_FIRE_UP + 1:
-        case AT_SKILL_HELL_FIRE_UP + 2:
-        case AT_SKILL_HELL_FIRE_UP + 3:
-        case AT_SKILL_HELL_FIRE_UP + 4:
-        case AT_SKILL_HELL:
+        case AT_SKILL_HELL_FIRE:
+        case AT_SKILL_HELL_FIRE_STR:
             CreateEffect(MODEL_CIRCLE, o->Position, o->Angle, o->Light, 0, o, o->PKKey, FindHotKey((c->Skill)));
             CreateEffect(MODEL_CIRCLE_LIGHT, o->Position, o->Angle, o->Light);
 
@@ -4274,12 +4316,13 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
 
             PlayBuffer(SOUND_HELLFIRE);
             break;
-        case AT_SKILL_BLAST_HELL:
+        case AT_SKILL_NOVA:
             CreateEffect(MODEL_CIRCLE, o->Position, o->Angle, o->Light, 1, o);
             StopBuffer(SOUND_NUKE1, true);
             PlayBuffer(SOUND_NUKE2);
             break;
-        case AT_SKILL_BLAST_POISON:
+        case AT_SKILL_DECAY:
+        case AT_SKILL_DECAY_STR:
             Position[0] = (float)(c->SkillX + 0.5f) * TERRAIN_SCALE;
             Position[1] = (float)(c->SkillY + 0.5f) * TERRAIN_SCALE;
             Position[2] = RequestTerrainHeight(Position[0], Position[1]);
@@ -4294,12 +4337,7 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
                 ++CharacterMachine->PacketSerial;
             }
             break;
-        case AT_SKILL_ICE_UP:
-        case AT_SKILL_ICE_UP + 1:
-        case AT_SKILL_ICE_UP + 2:
-        case AT_SKILL_ICE_UP + 3:
-        case AT_SKILL_ICE_UP + 4:
-        case AT_SKILL_BLAST_FREEZE:
+        case AT_SKILL_ICE_STORM:
         {
             vec3_t TargetPosition, Pos;
             TargetPosition[0] = (float)(c->SkillX + 0.5f) * TERRAIN_SCALE;
@@ -4323,6 +4361,8 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
         break;
 
         case AT_SKILL_FLAME:
+        case AT_SKILL_FLAME_STR:
+        case AT_SKILL_FLAME_STR_MG:
             Position[0] = (float)(c->SkillX + 0.5f) * TERRAIN_SCALE;
             Position[1] = (float)(c->SkillY + 0.5f) * TERRAIN_SCALE;
             Position[2] = RequestTerrainHeight(Position[0], Position[1]);
@@ -4340,12 +4380,8 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             PlayBuffer(SOUND_STORM);
             break;
 
-        case AT_SKILL_FIRE_SCREAM_UP:
-        case AT_SKILL_FIRE_SCREAM_UP + 1:
-        case AT_SKILL_FIRE_SCREAM_UP + 2:
-        case AT_SKILL_FIRE_SCREAM_UP + 3:
-        case AT_SKILL_FIRE_SCREAM_UP + 4:
-        case AT_SKILL_DARK_SCREAM:
+        case AT_SKILL_FIRE_SCREAM:
+        case AT_SKILL_FIRE_SCREAM_STR:
         {
             int SkillIndex = FindHotKey((c->Skill));
             OBJECT* pObj = o;
@@ -4400,12 +4436,10 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             CreateEffect(BITMAP_BOSS_LASER, Position, o->Angle, Light, 0, o, o->PKKey, FindHotKey(AT_SKILL_FLASH));
             PlayBuffer(SOUND_FLASH);
             break;
-        case AT_SKILL_BLAST_UP:
-        case AT_SKILL_BLAST_UP + 1:
-        case AT_SKILL_BLAST_UP + 2:
-        case AT_SKILL_BLAST_UP + 3:
-        case AT_SKILL_BLAST_UP + 4:
+
         case AT_SKILL_BLAST:
+        case AT_SKILL_BLAST_STR:
+        case AT_SKILL_BLAST_STR_MG:
             Position[0] = (float)(c->SkillX + 0.5f) * TERRAIN_SCALE;
             Position[1] = (float)(c->SkillY + 0.5f) * TERRAIN_SCALE;
             Position[2] = RequestTerrainHeight(Position[0], Position[1]);
@@ -4421,25 +4455,19 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             }
             break;
         case AT_SKILL_INFERNO:
+        case AT_SKILL_INFERNO_STR:
+        case AT_SKILL_INFERNO_STR_MG:
             CreateInferno(o->Position);
-            CreateEffect(MODEL_SKILL_INFERNO, o->Position, o->Angle, o->Light, 0, o, o->PKKey, FindHotKey(AT_SKILL_INFERNO));
+            CreateEffect(MODEL_SKILL_INFERNO, o->Position, o->Angle, o->Light, 0, o, o->PKKey, FindHotKey(c->Skill));
 
             if (c == Hero)
             {
                 ++CharacterMachine->PacketSerial;
             }
             break;
-        case AT_SKILL_EVIL_SPIRIT_UP_M:
-        case AT_SKILL_EVIL_SPIRIT_UP_M + 1:
-        case AT_SKILL_EVIL_SPIRIT_UP_M + 2:
-        case AT_SKILL_EVIL_SPIRIT_UP_M + 3:
-        case AT_SKILL_EVIL_SPIRIT_UP_M + 4:
-        case AT_SKILL_EVIL_SPIRIT_UP:
-        case AT_SKILL_EVIL_SPIRIT_UP + 1:
-        case AT_SKILL_EVIL_SPIRIT_UP + 2:
-        case AT_SKILL_EVIL_SPIRIT_UP + 3:
-        case AT_SKILL_EVIL_SPIRIT_UP + 4:
-        case AT_SKILL_EVIL:
+        case AT_SKILL_EVIL_SPIRIT:
+        case AT_SKILL_EVIL_SPIRIT_STR:
+        case AT_SKILL_EVIL_SPIRIT_STR_MG:
             vec3_t Position;
             VectorCopy(o->Position, Position);
             Position[2] += 100.f;
@@ -4549,7 +4577,7 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             PlayBuffer(SOUND_BCS_RUSH);
         }
         break;
-        case AT_SKILL_ONEFLASH:
+        case AT_SKILL_SPIRAL_SLASH:
             break;
 
         case AT_SKILL_BRAND_OF_SKILL:
@@ -4570,6 +4598,7 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             PlayBuffer(SOUND_BCS_BRAND_OF_SKILL);
             break;
         case AT_SKILL_ALICE_BERSERKER:
+        case AT_SKILL_ALICE_BERSERKER_STR:
             Vector(1.0f, 0.1f, 0.2f, Light);
             CreateEffect(BITMAP_MAGIC + 1, o->Position, o->Angle, Light, 11, o);
             CreateEffect(MODEL_ALICE_BUFFSKILL_EFFECT, o->Position, o->Angle, Light, 0, o);
@@ -4632,12 +4661,8 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             PlayBuffer(SOUND_SKILL_GIGANTIC_STORM);
         }
         break;
-        case AT_SKILL_LIGHTNING_SHOCK_UP:
-        case AT_SKILL_LIGHTNING_SHOCK_UP + 1:
-        case AT_SKILL_LIGHTNING_SHOCK_UP + 2:
-        case AT_SKILL_LIGHTNING_SHOCK_UP + 3:
-        case AT_SKILL_LIGHTNING_SHOCK_UP + 4:
         case AT_SKILL_LIGHTNING_SHOCK:
+        case AT_SKILL_LIGHTNING_SHOCK_STR:
         {
             // 				CHARACTER *tc = &CharactersClient[c->TargetCharacter];
             // 				OBJECT *to = &tc->Object;
@@ -4650,13 +4675,17 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             PlayBuffer(SOUND_SKILL_LIGHTNING_SHOCK);
         }
         break;
-        case AT_SKILL_THRUST:
+        case AT_SKILL_KILLING_BLOW:
+        case AT_SKILL_KILLING_BLOW_STR:
+        case AT_SKILL_KILLING_BLOW_MASTERY:
         {
             o->Angle[2] = CreateAngle2D(o->Position, c->TargetPosition);
             o->m_sTargetIndex = c->TargetCharacter;
         }
         break;
-        case AT_SKILL_STAMP:
+        case AT_SKILL_BEAST_UPPERCUT:
+        case AT_SKILL_BEAST_UPPERCUT_STR:
+        case AT_SKILL_BEAST_UPPERCUT_MASTERY:
         {
             o->m_sTargetIndex = c->TargetCharacter;
         }
@@ -4666,7 +4695,9 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
         if (c->TargetCharacter == -1)
         {
             BYTE Skill = 0;
-            if ((c->Skill) == AT_SKILL_CROSSBOW || (AT_SKILL_MANY_ARROW_UP <= (c->Skill) && (c->Skill) <= AT_SKILL_MANY_ARROW_UP + 4))
+            if (c->Skill == AT_SKILL_TRIPLE_SHOT
+                || c->Skill == AT_SKILL_TRIPLE_SHOT_STR
+                || c->Skill == AT_SKILL_TRIPLE_SHOT_MASTERY)
                 Skill = 1;
             if ((o->Type == MODEL_PLAYER &&
                 (o->CurrentAction == PLAYER_ATTACK_BOW || o->CurrentAction == PLAYER_ATTACK_CROSSBOW ||
@@ -4743,37 +4774,29 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             Angle[2] = CreateAngle2D(o->Position, to->Position);
             switch ((c->Skill))
             {
-            case AT_SKILL_MANY_ARROW_UP:
-            case AT_SKILL_MANY_ARROW_UP + 1:
-            case AT_SKILL_MANY_ARROW_UP + 2:
-            case AT_SKILL_MANY_ARROW_UP + 3:
-            case AT_SKILL_MANY_ARROW_UP + 4:
-            case AT_SKILL_CROSSBOW:
+            case AT_SKILL_TRIPLE_SHOT:
+            case AT_SKILL_TRIPLE_SHOT_STR:
+            case AT_SKILL_TRIPLE_SHOT_MASTERY:
                 CreateArrows(c, o, NULL, FindHotKey((c->Skill)), 1);
-            case AT_SKILL_PIERCING:
+            case AT_SKILL_PENETRATION:
+            case AT_SKILL_PENETRATION_STR:
                 CreateArrows(c, o, NULL, FindHotKey((c->Skill)), 0, (c->Skill));
                 break;
-            case AT_SKILL_PARALYZE:
+            case AT_SKILL_ICE_ARROW:
+            case AT_SKILL_ICE_ARROW_STR:
                 CreateArrows(c, o, NULL, FindHotKey((c->Skill)), 0, (c->Skill));
                 break;
             case AT_SKILL_DEEPIMPACT:
                 CreateArrows(c, o, to, FindHotKey((c->Skill)), 0, (c->Skill));
                 PlayBuffer(SOUND_BCS_DEEP_IMPACT);
                 break;
-            case AT_SKILL_HEAL_UP:
-            case AT_SKILL_HEAL_UP + 1:
-            case AT_SKILL_HEAL_UP + 2:
-            case AT_SKILL_HEAL_UP + 3:
-            case AT_SKILL_HEAL_UP + 4:
             case AT_SKILL_HEALING:
+            case AT_SKILL_HEALING_STR:
                 CreateEffect(BITMAP_MAGIC + 1, to->Position, to->Angle, to->Light, 1, to);
                 break;
-            case AT_SKILL_DEF_POWER_UP:
-            case AT_SKILL_DEF_POWER_UP + 1:
-            case AT_SKILL_DEF_POWER_UP + 2:
-            case AT_SKILL_DEF_POWER_UP + 3:
-            case AT_SKILL_DEF_POWER_UP + 4:
             case AT_SKILL_DEFENSE:
+            case AT_SKILL_DEFENSE_STR:
+            case AT_SKILL_DEFENSE_MASTERY:
                 if (c->SkillSuccess)
                 {
                     if (g_isCharacterBuff(o, eBuff_Cloaking))
@@ -4802,12 +4825,9 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
                     }
                 }
                 break;
-            case AT_SKILL_ATT_POWER_UP:
-            case AT_SKILL_ATT_POWER_UP + 1:
-            case AT_SKILL_ATT_POWER_UP + 2:
-            case AT_SKILL_ATT_POWER_UP + 3:
-            case AT_SKILL_ATT_POWER_UP + 4:
             case AT_SKILL_ATTACK:
+            case AT_SKILL_ATTACK_STR:
+            case AT_SKILL_ATTACK_MASTERY:
                 if (g_isCharacterBuff(o, eBuff_Cloaking)) break;
                 CreateEffect(BITMAP_MAGIC + 1, to->Position, to->Angle, to->Light, 3, to);
                 if (c->SkillSuccess)
@@ -4815,7 +4835,9 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
                     g_CharacterRegisterBuff(to, eBuff_Attack);
                 }
                 break;
-            case AT_SKILL_SLOW:
+            case AT_SKILL_ICE:
+            case AT_SKILL_ICE_STR:
+            case AT_SKILL_ICE_STR_MG:
                 CreateEffect(MODEL_ICE, to->Position, o->Angle, Light);
 
                 for (int i = 0; i < 5; i++)
@@ -4830,12 +4852,9 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
                 }
                 PlayBuffer(SOUND_ICE);
                 break;
-            case AT_SKILL_SOUL_UP:
-            case AT_SKILL_SOUL_UP + 1:
-            case AT_SKILL_SOUL_UP + 2:
-            case AT_SKILL_SOUL_UP + 3:
-            case AT_SKILL_SOUL_UP + 4:
-            case AT_SKILL_WIZARDDEFENSE:
+            case AT_SKILL_SOUL_BARRIER:
+            case AT_SKILL_SOUL_BARRIER_STR:
+            case AT_SKILL_SOUL_BARRIER_PROFICIENCY:
                 if (o->Type == MODEL_DARK_PHEONIX_SHIELD)
                 {
                     g_CharacterRegisterBuff(o, eBuff_WizDefense);
@@ -4854,6 +4873,7 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
                 }
                 break;
             case AT_SKILL_POISON:
+            case AT_SKILL_POISON_STR:
                 if (o->Type == MODEL_PLAYER)
                     CreateEffect(MODEL_POISON, to->Position, o->Angle, o->Light);
                 Vector(0.4f, 0.6f, 1.f, Light);
@@ -4896,6 +4916,8 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
                 PlayBuffer(SOUND_METEORITE01);
                 break;
             case AT_SKILL_FLAME:
+            case AT_SKILL_FLAME_STR:
+            case AT_SKILL_FLAME_STR_MG:
                 Position[0] = to->Position[0];
                 Position[1] = to->Position[1];
                 Position[2] = RequestTerrainHeight(Position[0], Position[1]);
@@ -4914,23 +4936,22 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
                 CreateEffect(MODEL_MAGIC2, o->Position, Angle, o->Light);
                 PlayBuffer(SOUND_MAGIC);
                 break;
-            case AT_SKILL_STRONG_PIER:
+            case AT_SKILL_FORCE:
+            case AT_SKILL_FORCE_WAVE:
+            case AT_SKILL_FORCE_WAVE_STR:
                 CreateEffect(MODEL_WAVES, o->Position, o->Angle, o->Light, 1);
                 CreateEffect(MODEL_WAVES, o->Position, o->Angle, o->Light, 1);
                 CreateEffect(MODEL_PIERCING2, o->Position, o->Angle, o->Light);
                 PlayBuffer(SOUND_ATTACK_SPEAR);
                 break;
-            case AT_SKILL_FIRE_BUST_UP:
-            case AT_SKILL_FIRE_BUST_UP + 1:
-            case AT_SKILL_FIRE_BUST_UP + 2:
-            case AT_SKILL_FIRE_BUST_UP + 3:
-            case AT_SKILL_FIRE_BUST_UP + 4:
-            case AT_SKILL_LONGPIER_ATTACK:
+            case AT_SKILL_FIREBURST:
+            case AT_SKILL_FIREBURST_STR:
+            case AT_SKILL_FIREBURST_MASTERY:
             {
                 vec3_t Angle = { 0.f, 0.f, o->Angle[2] };
                 vec3_t Pos = { 0.f, 0.f, (to->BoundingBoxMax[2] / 1.f) };
 
-                Vector(80.f, 0.f, 20.f, p);
+                Vector(40.f, 0.f, 10.f, p);
                 b->TransformPosition(o->BoneTransform[0], p, Position, true);
                 Angle[2] = o->Angle[2] + 90;
                 CreateEffect(MODEL_PIER_PART, Position, Angle, Pos, 0, to);
@@ -5017,19 +5038,15 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             }
             break;
 
-            case AT_SKILL_ALICE_SLEEP:
             case AT_SKILL_ALICE_BLIND:
-            case AT_SKILL_ALICE_SLEEP_UP:
-            case AT_SKILL_ALICE_SLEEP_UP + 1:
-            case AT_SKILL_ALICE_SLEEP_UP + 2:
-            case AT_SKILL_ALICE_SLEEP_UP + 3:
-            case AT_SKILL_ALICE_SLEEP_UP + 4:
+            case AT_SKILL_ALICE_SLEEP:
+            case AT_SKILL_ALICE_SLEEP_STR:
             case AT_SKILL_ALICE_THORNS:
             {
                 int iSkillIndex = (c->Skill);
                 vec3_t vLight;
 
-                if (iSkillIndex == AT_SKILL_ALICE_SLEEP || (AT_SKILL_ALICE_SLEEP_UP <= iSkillIndex && iSkillIndex <= AT_SKILL_ALICE_SLEEP_UP + 4))
+                if (iSkillIndex == AT_SKILL_ALICE_SLEEP || iSkillIndex == AT_SKILL_ALICE_SLEEP_STR)
                 {
                     Vector(0.7f, 0.3f, 0.8f, vLight);
                 }
@@ -5041,7 +5058,7 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
                 {
                     Vector(0.8f, 0.5f, 0.2f, vLight);
                 }
-                if (iSkillIndex == AT_SKILL_ALICE_SLEEP || iSkillIndex == AT_SKILL_ALICE_THORNS || (AT_SKILL_ALICE_SLEEP_UP <= iSkillIndex && iSkillIndex <= AT_SKILL_ALICE_SLEEP_UP + 4))
+                if (iSkillIndex == AT_SKILL_ALICE_SLEEP || iSkillIndex == AT_SKILL_ALICE_THORNS || iSkillIndex == AT_SKILL_ALICE_SLEEP_STR)
                 {
                     CreateEffect(BITMAP_MAGIC + 1, o->Position, o->Angle, vLight, 11, o);
                 }
@@ -5050,7 +5067,7 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
                     CreateEffect(BITMAP_MAGIC + 1, o->Position, o->Angle, vLight, 12, o);
                 }
 
-                if (iSkillIndex == AT_SKILL_ALICE_SLEEP || (AT_SKILL_ALICE_SLEEP_UP <= iSkillIndex && iSkillIndex <= AT_SKILL_ALICE_SLEEP_UP + 4))
+                if (iSkillIndex == AT_SKILL_ALICE_SLEEP || iSkillIndex == AT_SKILL_ALICE_SLEEP_STR)
                 {
                     Vector(0.8f, 0.3f, 0.9f, vLight);
                     CreateEffect(MODEL_ALICE_BUFFSKILL_EFFECT, to->Position, to->Angle, vLight, 0, to);
@@ -5070,22 +5087,14 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
                 }
             }
             break;
-            case AT_SKILL_ALICE_CHAINLIGHTNING_UP:
-            case AT_SKILL_ALICE_CHAINLIGHTNING_UP + 1:
-            case AT_SKILL_ALICE_CHAINLIGHTNING_UP + 2:
-            case AT_SKILL_ALICE_CHAINLIGHTNING_UP + 3:
-            case AT_SKILL_ALICE_CHAINLIGHTNING_UP + 4:
             case AT_SKILL_ALICE_CHAINLIGHTNING:
+            case AT_SKILL_ALICE_CHAINLIGHTNING_STR:
             {
                 PlayBuffer(SOUND_SKILL_CHAIN_LIGHTNING);
             }
             break;
-            case AT_SKILL_ALICE_DRAINLIFE_UP:
-            case AT_SKILL_ALICE_DRAINLIFE_UP + 1:
-            case AT_SKILL_ALICE_DRAINLIFE_UP + 2:
-            case AT_SKILL_ALICE_DRAINLIFE_UP + 3:
-            case AT_SKILL_ALICE_DRAINLIFE_UP + 4:
             case AT_SKILL_ALICE_DRAINLIFE:
+            case AT_SKILL_ALICE_DRAINLIFE_STR:
             {
                 CHARACTER* pTargetChar = &CharactersClient[c->TargetCharacter];
                 OBJECT* pSourceObj = o;
@@ -5124,18 +5133,13 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             switch ((c->Skill))
             {
             case AT_SKILL_HEALING:
-            case AT_SKILL_ATT_POWER_UP:
-            case AT_SKILL_ATT_POWER_UP + 1:
-            case AT_SKILL_ATT_POWER_UP + 2:
-            case AT_SKILL_ATT_POWER_UP + 3:
-            case AT_SKILL_ATT_POWER_UP + 4:
+            case AT_SKILL_HEALING_STR:
             case AT_SKILL_ATTACK:
-            case AT_SKILL_DEF_POWER_UP:
-            case AT_SKILL_DEF_POWER_UP + 1:
-            case AT_SKILL_DEF_POWER_UP + 2:
-            case AT_SKILL_DEF_POWER_UP + 3:
-            case AT_SKILL_DEF_POWER_UP + 4:
+            case AT_SKILL_ATTACK_STR:
+            case AT_SKILL_ATTACK_MASTERY:
             case AT_SKILL_DEFENSE:
+            case AT_SKILL_DEFENSE_STR:
+            case AT_SKILL_DEFENSE_MASTERY:
             case AT_SKILL_SUMMON:
             case AT_SKILL_SUMMON + 1:
             case AT_SKILL_SUMMON + 2:
@@ -5144,34 +5148,21 @@ void MoveCharacter(CHARACTER* c, OBJECT* o)
             case AT_SKILL_SUMMON + 5:
             case AT_SKILL_SUMMON + 6:
             case AT_SKILL_SUMMON + 7:
-            case AT_SKILL_HEAL_UP:
-            case AT_SKILL_HEAL_UP + 1:
-            case AT_SKILL_HEAL_UP + 2:
-            case AT_SKILL_HEAL_UP + 3:
-            case AT_SKILL_HEAL_UP + 4:
-
-            case AT_SKILL_SOUL_UP:
-            case AT_SKILL_SOUL_UP + 1:
-            case AT_SKILL_SOUL_UP + 2:
-            case AT_SKILL_SOUL_UP + 3:
-            case AT_SKILL_SOUL_UP + 4:
-            case AT_SKILL_WIZARDDEFENSE:
-            case AT_SKILL_BLOW_UP:
-            case AT_SKILL_BLOW_UP + 1:
-            case AT_SKILL_BLOW_UP + 2:
-            case AT_SKILL_BLOW_UP + 3:
-            case AT_SKILL_BLOW_UP + 4:
+            case AT_SKILL_SOUL_BARRIER:
+            case AT_SKILL_SOUL_BARRIER_STR:
+            case AT_SKILL_SOUL_BARRIER_PROFICIENCY:
             case AT_SKILL_DEATHSTAB:
-            case AT_SKILL_SPEAR:
-            case AT_SKILL_LIFE_UP:
-            case AT_SKILL_LIFE_UP + 1:
-            case AT_SKILL_LIFE_UP + 2:
-            case AT_SKILL_LIFE_UP + 3:
-            case AT_SKILL_LIFE_UP + 4:
-            case AT_SKILL_VITALITY:
-            case AT_SKILL_BLAST_HELL:
+            case AT_SKILL_DEATHSTAB_STR:
+            case AT_SKILL_IMPALE:
+            case AT_SKILL_SWELL_LIFE:
+            case AT_SKILL_SWELL_LIFE_STR:
+            case AT_SKILL_SWELL_LIFE_PROFICIENCY:
+            case AT_SKILL_NOVA:
             case AT_SKILL_IMPROVE_AG:
             case AT_SKILL_ADD_CRITICAL:
+            case AT_SKILL_ADD_CRITICAL_STR1:
+            case AT_SKILL_ADD_CRITICAL_STR2:
+            case AT_SKILL_ADD_CRITICAL_STR3:
             case AT_SKILL_PARTY_TELEPORT:
             case AT_SKILL_STUN:
             case AT_SKILL_REMOVAL_STUN:
@@ -6355,16 +6346,6 @@ void MoveCharacterClient(CHARACTER* cc)
     OBJECT* co = &cc->Object;
     if (co->Live)
     {
-#ifndef PJH_NEW_SERVER_SELECT_MAP
-        if (World == WD_77NEW_LOGIN_SCENE)
-        {
-            float fDistance_x = CameraPosition[0] - co->Position[0];
-            float fDistance_y = CameraPosition[1] - co->Position[1];
-            float fDistance = sqrtf(fDistance_x * fDistance_x + fDistance_y * fDistance_y);
-            if (!TestFrustrum2D(co->Position[0] * 0.01f, co->Position[1] * 0.01f, -100.f) || fDistance > 3800.f)
-                return;
-        }
-#endif //PJH_NEW_SERVER_SELECT_MAP
         co->Visible = TestFrustrum2D(co->Position[0] * 0.01f, co->Position[1] * 0.01f, -20.f);
 
         MoveMonsterClient(cc, co);
@@ -6792,7 +6773,7 @@ void RenderLinkObject(float x, float y, float z, CHARACTER* c, PART_t* f, int Ty
         Vector(0.f, 0.f, WorldTime, Object->Angle);
     }
 
-    if ((c->Skill) == AT_SKILL_PIERCING &&
+    if ((c->Skill == AT_SKILL_PENETRATION || c->Skill == AT_SKILL_PENETRATION_STR) &&
         ((o->Type == MODEL_PLAYER && o->CurrentAction >= PLAYER_ATTACK_FIST && o->CurrentAction <= PLAYER_RIDE_SKILL)))
     {
         if (o->AnimationFrame >= 5.f && o->AnimationFrame <= 10.f)
@@ -10400,7 +10381,7 @@ void RenderCharacter(CHARACTER* c, OBJECT* o, int Select)
         }
         else if (o->CurrentAction >= PLAYER_SKILL_SLEEP && o->CurrentAction <= PLAYER_SKILL_SLEEP_FENRIR)
         {
-            int iSkillType = CharacterAttribute->Skill[Hero->CurrentSkill];
+            auto iSkillType = CharacterAttribute->Skill[Hero->CurrentSkill];
 
             vec3_t vLight, vRelativePos, vWorldPos;
             Vector(1.0f, 1.0f, 1.0f, vLight);
@@ -10411,7 +10392,9 @@ void RenderCharacter(CHARACTER* c, OBJECT* o, int Select)
             float fRot = (WorldTime * 0.0006f) * 360.0f;
 
             // shiny
-            if (iSkillType == AT_SKILL_ALICE_SLEEP || (AT_SKILL_ALICE_SLEEP_UP <= iSkillType && iSkillType <= AT_SKILL_ALICE_SLEEP_UP + 4))	// nukun
+            if (iSkillType == AT_SKILL_ALICE_SLEEP
+                || iSkillType == AT_SKILL_ALICE_SLEEP_STR
+                )
             {
                 Vector(0.5f, 0.2f, 0.8f, vLight);
             }
@@ -10423,7 +10406,7 @@ void RenderCharacter(CHARACTER* c, OBJECT* o, int Select)
             {
                 Vector(0.8f, 0.5f, 0.2f, vLight);
             }
-            else if (iSkillType == AT_SKILL_ALICE_BERSERKER)
+            else if (iSkillType == AT_SKILL_ALICE_BERSERKER || iSkillType == AT_SKILL_ALICE_BERSERKER_STR)
             {
                 Vector(1.0f, 0.1f, 0.2f, vLight);
             }
@@ -10436,10 +10419,13 @@ void RenderCharacter(CHARACTER* c, OBJECT* o, int Select)
                 Vector(0.25f, 1.0f, 0.7f, Light);
             }
 
-            if (iSkillType == AT_SKILL_ALICE_SLEEP || iSkillType == AT_SKILL_ALICE_THORNS
-                || (AT_SKILL_ALICE_SLEEP_UP <= iSkillType && iSkillType <= AT_SKILL_ALICE_SLEEP_UP + 4)
+            if (iSkillType == AT_SKILL_ALICE_SLEEP
+                || iSkillType == AT_SKILL_ALICE_SLEEP_STR
+                || iSkillType == AT_SKILL_ALICE_THORNS
                 || iSkillType == AT_SKILL_ALICE_BERSERKER
-                || iSkillType == AT_SKILL_ALICE_WEAKNESS || iSkillType == AT_SKILL_ALICE_ENERVATION
+                || iSkillType == AT_SKILL_ALICE_BERSERKER_STR
+                || iSkillType == AT_SKILL_ALICE_WEAKNESS
+                || iSkillType == AT_SKILL_ALICE_ENERVATION
                 )
             {
                 CreateSprite(BITMAP_SHINY + 5, vWorldPos, 1.0f, vLight, o, fRot);
@@ -10453,7 +10439,7 @@ void RenderCharacter(CHARACTER* c, OBJECT* o, int Select)
 
             // pin_light
             if (iSkillType == AT_SKILL_ALICE_SLEEP
-                || (AT_SKILL_ALICE_SLEEP_UP <= iSkillType && iSkillType <= AT_SKILL_ALICE_SLEEP_UP + 4)
+                || iSkillType == AT_SKILL_ALICE_SLEEP_STR
                 )
             {
                 Vector(0.7f, 0.0f, 0.8f, vLight);
@@ -10466,7 +10452,7 @@ void RenderCharacter(CHARACTER* c, OBJECT* o, int Select)
             {
                 Vector(0.8f, 0.5f, 0.2f, vLight);
             }
-            else if (iSkillType == AT_SKILL_ALICE_BERSERKER)
+            else if (iSkillType == AT_SKILL_ALICE_BERSERKER || iSkillType == AT_SKILL_ALICE_BERSERKER_STR)
             {
                 Vector(1.0f, 0.1f, 0.2f, vLight);
             }
@@ -10479,10 +10465,13 @@ void RenderCharacter(CHARACTER* c, OBJECT* o, int Select)
                 Vector(0.25f, 1.f, 0.7f, vLight);
             }
 
-            if (iSkillType == AT_SKILL_ALICE_SLEEP || iSkillType == AT_SKILL_ALICE_THORNS
-                || (AT_SKILL_ALICE_SLEEP_UP <= iSkillType && iSkillType <= AT_SKILL_ALICE_SLEEP_UP + 4)
+            if (iSkillType == AT_SKILL_ALICE_SLEEP
+                || iSkillType == AT_SKILL_ALICE_SLEEP_STR
+                || iSkillType == AT_SKILL_ALICE_THORNS
                 || iSkillType == AT_SKILL_ALICE_BERSERKER
-                || iSkillType == AT_SKILL_ALICE_WEAKNESS || iSkillType == AT_SKILL_ALICE_ENERVATION
+                || iSkillType == AT_SKILL_ALICE_BERSERKER_STR
+                || iSkillType == AT_SKILL_ALICE_WEAKNESS
+                || iSkillType == AT_SKILL_ALICE_ENERVATION
                 )
             {
                 CreateSprite(BITMAP_PIN_LIGHT, vWorldPos, 1.7f, vLight, o, (float)(rand() % 360));
@@ -10496,7 +10485,7 @@ void RenderCharacter(CHARACTER* c, OBJECT* o, int Select)
 
             // cra04, clud64
             if (iSkillType == AT_SKILL_ALICE_SLEEP
-                || (AT_SKILL_ALICE_SLEEP_UP <= iSkillType && iSkillType <= AT_SKILL_ALICE_SLEEP_UP + 4)
+                || iSkillType == AT_SKILL_ALICE_SLEEP_STR
                 )
             {
                 Vector(0.6f, 0.1f, 0.8f, vLight);
@@ -10509,7 +10498,7 @@ void RenderCharacter(CHARACTER* c, OBJECT* o, int Select)
             {
                 Vector(0.8f, 0.5f, 0.2f, vLight);
             }
-            else if (iSkillType == AT_SKILL_ALICE_BERSERKER)
+            else if (iSkillType == AT_SKILL_ALICE_BERSERKER || iSkillType == AT_SKILL_ALICE_BERSERKER_STR)
             {
                 Vector(1.0f, 0.1f, 0.2f, vLight);
             }
@@ -10523,10 +10512,13 @@ void RenderCharacter(CHARACTER* c, OBJECT* o, int Select)
             }
             if (rand_fps_check(1))
             {
-                if (iSkillType == AT_SKILL_ALICE_SLEEP || iSkillType == AT_SKILL_ALICE_THORNS
-                    || (AT_SKILL_ALICE_SLEEP_UP <= iSkillType && iSkillType <= AT_SKILL_ALICE_SLEEP_UP + 4)
+                if (iSkillType == AT_SKILL_ALICE_SLEEP
+                    || iSkillType == AT_SKILL_ALICE_SLEEP_STR
+                    || iSkillType == AT_SKILL_ALICE_THORNS
                     || iSkillType == AT_SKILL_ALICE_BERSERKER
-                    || iSkillType == AT_SKILL_ALICE_WEAKNESS || iSkillType == AT_SKILL_ALICE_ENERVATION
+                    || iSkillType == AT_SKILL_ALICE_BERSERKER_STR
+                    || iSkillType == AT_SKILL_ALICE_WEAKNESS
+                    || iSkillType == AT_SKILL_ALICE_ENERVATION
                     )
                 {
                     CreateParticle(BITMAP_LIGHT + 2, vWorldPos, o->Angle, vLight, 0, 1.0f);
@@ -11914,7 +11906,6 @@ void SetCharacterScale(CHARACTER* c)
         c->BodyPart[BODYPART_HEAD].Type = -1;
     }
 
-#ifdef PJH_NEW_SERVER_SELECT_MAP
     if (SceneFlag == CHARACTER_SCENE)
     {
         switch (gCharacterManager.GetBaseClass(c->Class))
@@ -11925,7 +11916,6 @@ void SetCharacterScale(CHARACTER* c)
     }
     else
     {
-#endif //PJH_NEW_SERVER_SELECT_MAP
         if (c->Skin == 0)
         {
             switch (gCharacterManager.GetBaseClass(c->Class))
@@ -11952,9 +11942,7 @@ void SetCharacterScale(CHARACTER* c)
             case CLASS_RAGEFIGHTER:	c->Object.Scale = 1.03f; break;
             }
         }
-#ifdef PJH_NEW_SERVER_SELECT_MAP
     }
-#endif //PJH_NEW_SERVER_SELECT_MAP
 }
 
 void SetCharacterClass(CHARACTER* c)
@@ -14068,6 +14056,7 @@ CHARACTER* CreateMonster(EMonsterType Type, int PositionX, int PositionY, int Ke
         c->Weapon[0].Level = 8;
         c->Weapon[1].Type = -1;
         SetCharacterScale(c);
+        c->Object.m_bpcroom = false;
         break;
     case MONSTER_ALEX:
         OpenNpc(MODEL_MERCHANT_MAN);
@@ -14739,19 +14728,6 @@ CHARACTER* CreateMonster(EMonsterType Type, int PositionX, int PositionY, int Ke
         wcscpy(c->ID, L"신녀 베이나");
         c->Object.Position[2] += 145.0f;
         break;
-    case MONSTER_WANDERING_MERCHANT_ZYRO:
-    {
-        OpenNpc(MODEL_ZAIRO);
-        c = CreateCharacter(Key, MODEL_ZAIRO, PositionX, PositionY);
-        wcscpy(c->ID, L"떠돌이상인 자이로");
-        c->Object.LifeTime = 100;
-        c->Object.Scale = 0.8f;
-        c->Object.m_fEdgeScale = 1.1f;
-        int i;
-        for (i = 0; i < 6; ++i)
-            Models[MODEL_ZAIRO].Actions[i].PlaySpeed = 0.33f;
-    }
-    break;
     case MONSTER_LEINA_THE_GENERAL_GOODS_MERCHANT:
         OpenNpc(MODEL_KARUTAN_NPC_REINA);
         c = CreateCharacter(Key, MODEL_KARUTAN_NPC_REINA, PositionX, PositionY);

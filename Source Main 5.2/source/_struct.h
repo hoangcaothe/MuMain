@@ -70,17 +70,16 @@ namespace info
     {
         BYTE	byClass;
         wchar_t	szName[32];
-        //char	szName[CRW_NAME_MAX];
     };
 
     struct Script_Movereq
     {
         int index;
-        wchar_t szMainMapName[32];			//. Main map name
-        wchar_t szSubMapName[32];			//. Substitute map name
-        int	iReqLevel;					//. required level
-        int iReqZen;					//. required zen
-        int iGateNum;					//. Gate number
+        wchar_t szMainMapName[32];
+        wchar_t szSubMapName[32];
+        int	iReqLevel;
+        int iReqZen;
+        int iGateNum;
     };
 
     struct Script_Quest_Class_Act
@@ -430,6 +429,34 @@ typedef struct
     BYTE ClassSkill[MAX_SKILLS];
 } CLASS_ATTRIBUTE;
 
+class CSkillTreeInfo
+{
+public:
+    CSkillTreeInfo()
+    {
+        this->skillLevel = 0;
+        this->skillValue = 0.0f;
+        this->skillNextValue = 0.0f;
+    }
+
+    CSkillTreeInfo(BYTE point, float value, float nextValue)
+    {
+        this->skillLevel = point;
+        this->skillValue = value;
+        this->skillNextValue = nextValue;
+    }
+
+    ~CSkillTreeInfo() = default;
+
+    BYTE GetSkillLevel() const { return this->skillLevel; }
+    float GetSkillValue() const { return this->skillValue; }
+    float GetSkillNextValue() const { return this->skillNextValue; }
+private:
+    BYTE skillLevel;
+    float skillValue;
+    float skillNextValue;
+};
+
 typedef struct
 {
     wchar_t Name[MAX_ID_SIZE + 1];
@@ -493,8 +520,11 @@ typedef struct
     uint64_t NextExperience;
 
     ActionSkillType Skill[MAX_SKILLS];
-    BYTE SkillLevel[MAX_SKILLS];
     int  SkillDelay[MAX_SKILLS];
+    BYTE SkillLevel[MAX_SKILLS]; // Do we even need this array when we have the map of CSkillTreeInfo?
+
+    CSkillTreeInfo MasterSkillInfo[AT_SKILL_MASTER_END + 1]; // Index = ActionSkillType
+    
 } CHARACTER_ATTRIBUTE;
 
 typedef struct _MASTER_LEVEL_VALUE
@@ -663,7 +693,7 @@ typedef struct
 typedef struct
 {
     bool m_bMagic;
-    int m_iSkill;
+    int m_iSkill; // When m_bMagic is true, it's the skill index, otherwise it's already the ActionSkillType. TODO: check all usages, refactor. This could be buggy as hell.
     int m_iTarget;
 } MovementSkill;
 //interface end
