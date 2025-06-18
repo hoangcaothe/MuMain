@@ -455,8 +455,6 @@ bool CNewUIMuHelper::Update()
             m_Skill2DelayInput.SetState(UISTATE_NORMAL);
             m_Skill3DelayInput.SetState(UISTATE_NORMAL);
             m_ItemInput.SetState(UISTATE_HIDE);
-
-            m_DistanceTimeInput.GiveFocus();
         }
         else if (m_iCurrentOpenTab == 1)
         {
@@ -464,8 +462,6 @@ bool CNewUIMuHelper::Update()
             m_Skill2DelayInput.SetState(UISTATE_HIDE);
             m_Skill3DelayInput.SetState(UISTATE_HIDE);
             m_ItemInput.SetState(UISTATE_NORMAL);
-
-            m_ItemInput.GiveFocus();
         }
     }
     return true;
@@ -683,6 +679,16 @@ bool CNewUIMuHelper::UpdateMouseEvent()
         else if (iIconIndex == TEXTBOX_IMG_ADD_EXTRA_ITEM)
         {
             m_ItemInput.GiveFocus();
+        }
+        else
+        {
+            SetFocus(g_hWnd);
+        }
+
+        POINT ptExitBtn = { m_Pos.x + 169, m_Pos.y + 7 };
+        if (CheckMouseIn(ptExitBtn.x, ptExitBtn.y, 13, 12))
+        {
+            g_pNewUISystem->Hide(SEASON3B::INTERFACE_MUHELPER);
         }
     }
     if (IsRelease(VK_RBUTTON))
@@ -929,6 +935,7 @@ void CNewUIMuHelper::SaveExtraItem()
     }
 
     m_ItemInput.SetText(L"");
+    SetFocus(g_hWnd);
 }
 
 void CNewUIMuHelper::RemoveExtraItem()
@@ -1930,20 +1937,27 @@ bool CNewUIMuHelperSkillList::Render()
     float iconOffsetX = (boxWidth - iconWidth) / 2.f;
     float iconOffsetY = (boxHeight - iconHeight) / 2.f;
 
-    // top skills Helper basic
+    // x position relative to the position of mu helper window
     float startX = 640.f - 190.f - 32.f;
-    float startY = m_bFilterByAttackSkills ? 20.f : 260.f;
+    // y position relative to the skill/buff selection in mu helper window
+    float startY = m_bFilterByAttackSkills ? 171.f : 293.f;
 
-    int itemsPerColumn = m_bFilterByAttackSkills ? 10 : 6;
-    int iSkillCount = 0;
+    int itemsPerColumn = m_bFilterByAttackSkills ? 10 : 5;
 
-    for (int iSkillType : m_aiSkillsToRender)
+    for (int i = 0; i < m_aiSkillsToRender.size(); i++)
     {
-        int col = iSkillCount / itemsPerColumn;
-        int row = iSkillCount % itemsPerColumn;
+        int iSkillType = m_aiSkillsToRender[i];
 
-        float x = startX - col * boxWidth;
-        float y = startY + row * boxHeight;
+        int col = i / itemsPerColumn;
+        int rowInColumn = i % itemsPerColumn;
+
+        int offset = (rowInColumn + 1) / 2;
+        bool skillCountEven = (rowInColumn % 2 == 0);
+
+        float x = startX - col * boxWidth; // left to right
+        float y = skillCountEven           // bounce up and down from center
+            ? startY - offset * boxHeight
+            : startY + offset * boxHeight;
 
         RenderImage(IMAGE_SKILLBOX, x, y, boxWidth, boxHeight);
         RenderSkillIcon(iSkillType, x + iconOffsetX, y + iconOffsetY, iconWidth, iconHeight);
@@ -1953,8 +1967,6 @@ bool CNewUIMuHelperSkillList::Render()
             { static_cast<LONG>(x), static_cast<LONG>(y) },
             { static_cast<LONG>(boxWidth), static_cast<LONG>(boxHeight) }
             });
-
-        iSkillCount++;
     }
 
     if (m_bRenderSkillInfo && m_pNewUI3DRenderMng)
